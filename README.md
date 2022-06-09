@@ -43,7 +43,7 @@ There is only one CW generator in the ESP32. When enabled on both DAC channels t
 
 The frequency of the internal cosine waveform (CW) generator is easily set but somehow limited in range and stepsize. However, for simple requirements using the internal CW generator instead of external DAC hardware might save you time & costs.
 
-The ESP32 technical spec states the CW frequency is calculated as follows:  
+According to ESP32 technical specs the CW frequency is calculated as follows:  
   - fcw = RTC8M_CLK / (1 + RTC_CNTL_CK8M_DIV_SEL) * (SENS_SW_FSTEP / 65536)  
 
 RTC8M_CLK is an internal RC oscillator clock (belonging to the group of low-power clocks) with a default frequency of roughly 8 MHz (mostly slightly above according to spec). This frequency is adjustable/tunable by changing the value of register RTC_CNTL_CK8M_DFREQ (default 172).
