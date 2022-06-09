@@ -34,8 +34,7 @@ All CW generator frequency calculations are done with the assumption of RTC8M_CL
 Below definition enables a more accurate setting of the CW generator output frequency and is uncommented by default. However, the digital controller clock (dig_clk_rtc_freq = RTC8M_CLK / 1 + RTC_CNTL_CK8M_DIV_SEL) of both the DAC and ADC modules in the ESP32 might get changed (due to altered value of RTC_CNTL_CK8M_DIV_SEL). Comment below line out if this causes problems or high frequency accuracy is not needed.  
 `#define CW_FREQUENCY_HIGH_ACCURACY`  
 
-Below value defines the CW generators minimum number of voltage steps per cycle. Too low values will reduce the maximal possible CW output frequency though.  
-Lowering the value will increase the minimum number of voltage steps/cycle and vice versa. For more infos see section CW generator below.  
+Below value defines the CW generators minimum number of voltage steps per cycle. Too low values will reduce the maximal possible CW output frequency though. Lowering the value will increase the minimum number of voltage steps/cycle and vice versa. For more infos see section CW generator below.  
 `#define SW_FSTEP_MAX  256`
 
 ## :information_source: The integrated cosine waveform (CW) generator 
