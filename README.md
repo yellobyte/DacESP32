@@ -26,7 +26,7 @@ For more usage infos have a look at the many [examples](https://github.com/yello
 Put the DacESP32 library folder into your IDE standard library folder. You may have to restart the IDE. All examples were build & tested with ArduinoIDE V1.8.19 and VSCode/PlatformIO.
 
 
-### :hammer_and_wrench: Useful definitions in DacESP32.cpp
+### :hammer_and_wrench: Modifiable definitions in DacESP32.cpp
 
 All CW generator frequency calculations are done with the assumption of RTC8M_CLK (clock source that feeds both DACs controller section) to run near 8MHz. If your ESP32 exemplar is way off you might want to uncomment below line for adjustment/tuning. Default value is 172. Lowering the value will lower the frequency and vice versa. For more infos see section CW generator below.  
 `//#define CK8M_DFREQ_ADJUSTED 172`
