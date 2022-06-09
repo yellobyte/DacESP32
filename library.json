@@ -1,0 +1,36 @@
+{
+  "name": "DacESP32",
+  "version": "1.0.0", 
+  "platforms":
+  [
+    "espressif32"
+  ], 
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/yellobyte/DacESP32.git"
+  },
+  "frameworks": "arduino", 
+  "keywords":
+  [
+    "ESP32",
+    "Analog",
+    "Output",
+    "DAC",
+		"Channels",
+    "Cosine",
+    "Waveform",
+    "Generator",
+    "CW"
+  ],
+  "description": "Arduino library for using the ESP32 DAC output channels fast & easy.",
+  "authors":
+  [
+    {
+      "name": "Thomas Jentzsch",
+      "email": "yellobyte@bluewin.ch",
+      "maintainer": true,
+      "url": null
+    }
+  ]
+}

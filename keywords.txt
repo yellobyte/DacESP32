@@ -1,0 +1,44 @@
+#######################################
+# Syntax Coloring Map For Test
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+DacESP32	KEYWORD1
+dac_cw_invert_t  KEYWORD1
+
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+outputVoltage	KEYWORD2
+outputCW	KEYWORD2
+setPin	KEYWORD2
+setChannel	KEYWORD2
+getGPIOnum	KEYWORD2
+enable	KEYWORD2
+disable	KEYWORD2
+setCwFrequency	KEYWORD2
+setCwScale		KEYWORD2
+setCwOffset	KEYWORD2
+setCwPhase	KEYWORD2
+getChannel	KEYWORD2
+getCwScale	KEYWORD2
+getCwPhase	KEYWORD2
+getCwOffset	KEYWORD2
+
+  
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+DAC_CW_INVERT_NONE	LITERAL1
+DAC_CW_INVERT_ALL	LITERAL1
+DAC_CW_INVERT_MSB	LITERAL1
+DAC_CW_INVERT_NOT_MSB	LITERAL1
+
+
+
