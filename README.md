@@ -49,7 +49,7 @@ According to ESP32 technical specs the CW frequency is calculated as follows:
 RTC8M_CLK is an internal RC oscillator clock (belonging to the group of low-power clocks) with a default frequency of roughly 8 MHz (mostly slightly above according to spec). This frequency is adjustable/tunable by changing the value of register RTC_CNTL_CK8M_DFREQ (default 172).
 
 As above formula tells you, changing the frequency is only possible in defined steps. With CK8M_DIV_SEL = 0 (default) a minimal frequency step is ~122 Hz, by setting CK8M_DIV_SEL to 7 (max) the stepsize gets greatly reduced to ~15.3 Hz. Function setCwFrequency() makes use of it if CW_FREQUENCY_HIGH_ACCURACY is defined.  
-Be aware: Changing CK8M_DIV_SEL will change the digital controller clock (dig_clk_rtc) of both the DAC and(!) ADC modules in the ESP32. If you use them simultaneously you have to take this into account.
+Be aware: Changing CK8M_DIV_SEL will change the digital controller clock (dig_clk_rtc_freq) of both the DAC and(!) ADC modules in the ESP32. If you use them simultaneously you have to take this into account.
 
 To assure at least 256 points per cycle the value for SW_FSTEP should be limited to 256 which still results in a possible highest output frequency of ~32kHz.  
   - SW_FSTEP_MAX = 128  -->  voltage steps/cycle >= 512, fmax ~15.6kHz  
