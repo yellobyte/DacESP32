@@ -7,7 +7,7 @@
 #######################################
 
 DacESP32	KEYWORD1
-dac_cw_invert_t  KEYWORD1
+dac_cw_invert_t	KEYWORD1
 
 
 #######################################
@@ -22,7 +22,7 @@ getGPIOnum	KEYWORD2
 enable	KEYWORD2
 disable	KEYWORD2
 setCwFrequency	KEYWORD2
-setCwScale		KEYWORD2
+setCwScale	KEYWORD2
 setCwOffset	KEYWORD2
 setCwPhase	KEYWORD2
 getChannel	KEYWORD2
