@@ -56,9 +56,9 @@ To assure at least 256 points per cycle the value for SW_FSTEP should be limited
   - SW_FSTEP_MAX = 256  -->  voltage steps/cycle >= 256, fmax ~31.3kHz   
   - SW_FSTEP_MAX = 512  -->  voltage steps/cycle >= 128, fmax ~62.6kHz  
 
-Choose the best compromize that fits your application best.  
+Choose a value that fits your application best.  
 
-Measurements on a randomly picked ESP32 dev module showed notable deviations between calculated & generated frequency. With CK8M_DFREQ = 172 (default), CK8M_DIV_SEL = 0 and varying SW_FSTEP the results were:
+Actual measurements on a randomly picked ESP32 dev module showed notable deviations between calculated & generated frequency. With CK8M_DFREQ = 172 (default), CK8M_DIV_SEL = 0 and varying SW_FSTEP the results were:
   - SW_FSTEP = 1   -> calculated:   122.07 Hz, measured:   125.8 Hz
   - SW_FSTEP = 25  -> calculated:  3051.75 Hz, measured:  3145.0 Hz
   - SW_FSTEP = 256 -> calculated: 31250.00 Hz, measured: 32226.4 Hz  
