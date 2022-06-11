@@ -114,6 +114,7 @@ class DacESP32
     esp_err_t enable(void);
     esp_err_t disable(void);
     esp_err_t outputVoltage(uint8_t value);
+    esp_err_t outputVoltage(float voltage);
     esp_err_t outputCW(uint32_t frequency);
     esp_err_t outputCW(uint32_t frequency, dac_cw_scale_t scale,
                        dac_cw_phase_t phase = DAC_CW_PHASE_0, int8_t offset = DAC_CW_OFFSET_DEFAULT);                       

@@ -41,6 +41,9 @@ Below definition enables a more accurate setting of the CW generator output freq
 Below value defines the CW generators minimum number of voltage steps per cycle. Too low values will reduce the maximal possible CW output frequency though. Lowering the value will increase the minimum number of voltage steps/cycle and vice versa. For more infos see section CW generator below.  
 `#define SW_FSTEP_MAX  256`
 
+The maximum possible DAC output voltage depends on the actual supply voltage (VDD) of your ESP32. It will vary with the used LDO voltage regulator on your board and other factors. To generate a more precise output voltage: Generate max voltage level on a DAC channel with outputVoltage(255) and measure the real voltage on it (with only light or no load!). Then replace below value with the measured one.
+`#define CHANNEL_VOLTAGE_MAX (float) 3.30`  
+
 ## :information_source: The integrated cosine waveform (CW) generator 
 
 There is only one CW generator in the ESP32. When enabled on both DAC channels than the signal frequency on both channels will always be equal ! Phase, amplitude and offset can be set independently for both channels though.

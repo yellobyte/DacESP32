@@ -7,7 +7,7 @@
   This sketch activates only DAC channel 1 and generates a sawtooth waveform
   with a very low frequency (~4Hz). 
 
-  Last updated 2022-06-07, ThJ <yellobyte@bluewin.ch>
+  Last updated 2022-06-09, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
@@ -24,8 +24,8 @@ void setup() {
 }
 
 void loop() {
-	uint16_t level;
-	
+  uint16_t level;
+  
   // outputs the full 8-bit scale from 0 to 255
   for (level = 0; level < 256; level++) {
     dac1.outputVoltage(level);

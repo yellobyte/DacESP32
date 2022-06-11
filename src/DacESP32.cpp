@@ -59,6 +59,13 @@
 // Choose a value that fits your application best.
 #define SW_FSTEP_MAX  256
 
+// The maximum possible DAC output voltage depends on the actual supply voltage (VDD) 
+// of your ESP32. It will vary with the used LDO voltage regulator on your board and
+// other factors. To generate a more precise output voltage: Generate max voltage 
+// level on a DAC channel with outputVoltage(255) and measure the real voltage on 
+// it (with only light or no load!). Then replace below value with the measured one.
+#define CHANNEL_VOLTAGE_MAX (float) 3.30
+
 #define CHANNEL_CHECK                               \
   if (m_channel == DAC_CHANNEL_UNDEFINED) {         \
     log_e("channel setting invalid");               \
@@ -194,8 +201,24 @@ esp_err_t DacESP32::disable()
 
 //
 // Set DAC output voltage. 
-// Parameter: value...DAC output value 
+// Parameter: value...DAC output voltage (in Volt)
+//                    Range 0...CHANNEL_VOLTAGE_MAX (see #definition above)
+//
+esp_err_t DacESP32::outputVoltage(float voltage)
+{
+  if (voltage < 0 )
+    voltage = 0;
+  else if (voltage > CHANNEL_VOLTAGE_MAX)
+    voltage = CHANNEL_VOLTAGE_MAX;
+
+  return outputVoltage((uint8_t)((voltage / CHANNEL_VOLTAGE_MAX) * 255));
+}
+
+//
+// Set DAC output voltage. 
+// Parameter: value...DAC output value
 //                    DAC output is 8-bit. Maximum (255) corresponds to ~VDD.
+//                    Range 0...255
 //
 esp_err_t DacESP32::outputVoltage(uint8_t value)
 {
