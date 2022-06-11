@@ -7,13 +7,14 @@
   This sketch generates a ~500Hz sinus signal on DAC channel 1 (GPIO pin 25)
   followed by a ~500Hz digital output signal, 5 seconds each & alternatingly. 
 
-  Last updated 2022-06-08, ThJ <yellobyte@bluewin.ch>
+  Last updated 2022-06-11, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
 #include "DacESP32.h"
 
-uint32_t counter, mode = 1;
+uint32_t counter, 
+         mode = 1; // analog output starts
 
 void setup() {
   Serial.begin(115200);
@@ -37,6 +38,6 @@ void loop() {
     do {
       digitalWrite(GPIO_NUM_25,!digitalRead(GPIO_NUM_25));
       delay(1);
-    } while (counter++ < 2500);
+    } while (counter++ < 5000);
   }
 }
