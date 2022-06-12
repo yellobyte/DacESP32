@@ -15,8 +15,8 @@ DacESP32 dac1(DAC_CHANNEL_1),
          dac2(DAC_CHANNEL_2);
 
 setup() {
-  dac1.outputCW(2000);      // ~2kHz sinus signal on pin 25
-  dac2.outputVoltage(100);  // steady voltage level of ~1.3V on pin 26
+  dac1.outputCW(2000);              // 2kHz sinus signal on pin 25
+  dac2.outputVoltage((float)1.3));  // steady voltage level of 1.3V on pin 26
 }
 ...
 ```
