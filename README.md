@@ -5,7 +5,7 @@ Both channels can be driven alternatively by an integrated common cosine wavefor
 
 This Arduino library makes using the two ESP32 DAC output channels fast & easy.
 
-Below an example for generating a sinus signal of ~2kHz on GPIO25 (Channel 1) and a steady voltage level of about 1.3V (100/255 * 3.3V) on GPIO26 (Channel 2).  
+Below an example for generating a sinus signal of ~2kHz on GPIO25 (Channel 1) and a steady voltage level of about 1.3V on GPIO26 (Channel 2).  
 
 ```c
 ...
@@ -15,8 +15,10 @@ DacESP32 dac1(DAC_CHANNEL_1),
          dac2(DAC_CHANNEL_2);
 
 setup() {
-  dac1.outputCW(2000);              // 2kHz sinus signal on pin 25
-  dac2.outputVoltage((float)1.3));  // steady voltage level of 1.3V on pin 26
+  dac1.outputCW(2000);                // 2kHz sinus signal on pin 25
+  dac2.outputVoltage((float)1.3);     // steady voltage level of 1.3V on pin 26
+  // same as above but with 8-bit argument, range 0...255 (Vout = 100/255 * 3.3V)
+  //dac2.outputVoltage((uint8_t)100); // steady voltage level of 1.3V on pin 26
 }
 ...
 ```
