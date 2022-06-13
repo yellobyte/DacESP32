@@ -1,7 +1,6 @@
 # DacESP32
 
-The ESP32 contains two 8-bit DAC (digital to analog converter) channels, connected to GPIO25 (DAC Channel 1) and GPIO26 (DAC Channel 2). Using the DACs allows these channels to be set to arbitrary output voltages between 0...+3.3V (VDD).  
-Both channels can be driven alternatively by an integrated common cosine waveform (CW) generator. The CW generator is explained more detailed further down.
+The ESP32 contains two 8-bit DAC (digital to analog converter) channels, connected to GPIO25 (DAC Channel 1) and GPIO26 (DAC Channel 2). Using the DACs allows these channels to be set to arbitrary output voltages between 0...+3.3V (VDD). Both channels can be driven alternatively by an integrated common cosine waveform (CW) generator. The CW generator is explained more detailed further down.
 
 This Arduino library makes using the two ESP32 DAC output channels fast & easy.
 
