@@ -8,7 +8,7 @@
   cosine waveform (CW) generator and a ~70Hz triangle waveform on DAC channel 2
   setting the DAC output level discretely with function outputVoltage().
 
-  Last updated 2022-06-11, ThJ <yellobyte@bluewin.ch>
+  Last updated 2022-06-15, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
@@ -32,7 +32,7 @@ void setup() {
   Serial.println(pinCh2);
 
   // outputs a ~200Hz sinus signal on DAC channel 1 (GPIO pin 25)
-  dac2.outputCW(200);
+  dac1.outputCW(200);
 }
 
 void loop() {
@@ -41,9 +41,9 @@ void loop() {
   // generates a triangle signal on DAC channel 2 (GPIO pin 26) using
   // the full 8-bit scale from 0 to 255
   for (level = 0; level < 256; level++) {
-    dac1.outputVoltage(level);
+    dac2.outputVoltage(level);
   }
   for (level = 255; level >= 0; level--) {
-    dac1.outputVoltage(level);
+    dac2.outputVoltage(level);
   }
 }
