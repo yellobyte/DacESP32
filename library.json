@@ -1,6 +1,6 @@
 {
   "name": "DacESP32",
-  "version": "1.0.7", 
+  "version": "1.0.9", 
   "platforms":
   [
     "espressif32"
