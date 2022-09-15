@@ -77,10 +77,12 @@
 // According to spec approximately 8MHz.
 #define CK8M 8000000UL
 
-// Some typedefs missing in latest Arduino IDEs espressif32 framework V1.0.6 
-// (version depending ?) but provided in all recent PlatformIOs espressif32 
-// frameworks (3.4.0 to 4.4.0).
-#ifndef PLATFORMIO
+// Type definitions needed only for older Espressif ESP32 framework versions:
+//  <=1.0.6 on ArduinoIDE resp. <=3.3.0 on PlatformIO
+// All newer framework versions provide these definitions in dac_types.h.
+
+//#define DACESP32_TYPE_DEFS
+#ifdef DACESP32_TYPE_DEFS
 typedef enum {
     DAC_CW_SCALE_1 = 0x0,     // 1/1 (default)
     DAC_CW_SCALE_2 = 0x1,     // 1/2 

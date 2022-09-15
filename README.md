@@ -29,7 +29,10 @@ To use this library, open the **Library Manager** in your **Arduino IDE**. Go to
 
 In **VSCode/PlatformIO** click the **platformio sidebar icon**, open the **libraries** view and search for DacESP32 and click on **Add to Project**.
 
-All examples were build & tested with ArduinoIDE V1.8.19 and VSCode/PlatformIO (Core 6.0.x/Home 3.4.x).
+All examples were build & tested with ArduinoIDE V1.8.19 and VSCode/PlatformIO (Core 6.0.x/Home 3.4.x).  
+
+**ATTENTION:**  
+Older Espressif ESP32 framework versions (<=1.0.6 on ArduinoIDE resp. <=3.3.0 on PlatformIO) have some needed type definitions missing. So in case you get build errors like '_definition for dac_cw_scale_t missing_' or '_definition for dac_cw_phase_t missing_' please uncomment line '#define DACESP32_TYPE_DEFS' in DacESP32.h".
 
 ### :hammer_and_wrench: Modifiable definitions in DacESP32.cpp
 
@@ -83,6 +86,6 @@ Folder [**Doc**](https://github.com/yellobyte/DacESP32/tree/main/doc) contains a
 
 ## :relaxed: Postscript
 
-If you run into trouble with this lib or have suggestions how to improve it, feel free to contact me.
+If you run into trouble with this lib or have suggestions how to improve it, feel free to contact me.  
 
 And a last remark: Putting this library together took quite long hours and a lot of coffee. So if you like it, please give it a star. Thanks !
