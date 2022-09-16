@@ -31,7 +31,7 @@ In **VSCode/PlatformIO** click the **platformio sidebar icon**, open the **libra
 
 All examples were build & tested with ArduinoIDE V1.8.19 and VSCode/PlatformIO (Core 6.0.x/Home 3.4.x).  
 
-**ATTENTION** :exclamation:  
+### :bangbang: **ATTENTION:**  
 Older Espressif ESP32 framework versions (<=1.0.6 on ArduinoIDE resp. <=3.3.0 on PlatformIO) have some needed type definitions missing. So in case you get build errors like '_definition for dac_cw_scale_t missing_' or '_definition for dac_cw_phase_t missing_' please uncomment line '#define DACESP32_TYPE_DEFS' in DacESP32.h".
 
 ### :hammer_and_wrench: Modifiable definitions in DacESP32.cpp
