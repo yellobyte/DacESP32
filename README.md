@@ -87,4 +87,3 @@ Folder [**Doc**](https://github.com/yellobyte/DacESP32/tree/main/doc) contains a
 ## :relaxed: Postscript
 
 If you run into trouble with this lib or have suggestions how to improve it, feel free to contact me.  
-If you like it, please give it a star.
