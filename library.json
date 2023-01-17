@@ -23,7 +23,7 @@
     "Generator",
     "CW"
   ],
-  "description": "Arduino library for using the ESP32 DAC output channels fast & easy.",
+  "description": "Arduino library for using the ESP32 DAC output channels fast & easy. Including support for the integrated cosine waveform (CW) generator.",
   "authors":
   [
     {
