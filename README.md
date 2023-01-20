@@ -50,7 +50,7 @@ The maximum possible DAC output voltage depends on the actual supply voltage (VD
 
 ## :information_source: The integrated cosine waveform (CW) generator 
 
-There is only one CW generator in the ESP32. When enabled on both DAC channels than the signal frequency on both channels will always be equal ! Phase, amplitude and offset can be set independently for both channels though.
+There is only one CW generator in the ESP32. When enabled on both DAC channels then the signal frequency on both channels will always be equal ! Phase, amplitude and offset can be set independently for both channels though.
 
 The frequency of the internal cosine waveform (CW) generator is easily set but somehow limited in range and stepsize. However, for simple requirements using the internal CW generator instead of external DAC hardware might save you time & costs.
 
