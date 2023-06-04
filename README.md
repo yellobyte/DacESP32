@@ -16,8 +16,7 @@ DacESP32 dac1(DAC_CHANNEL_1),
 setup() {
   dac1.outputCW(2000);                // 2kHz sinus signal on pin 25
   dac2.outputVoltage((float)1.3);     // steady voltage level of 1.3V on pin 26
-  // same as above but with 8-bit argument, range 0...255 (Vout = 100/255 * 3.3V)
-  //dac2.outputVoltage((uint8_t)100);
+  //dac2.outputVoltage((uint8_t)100); // same as above but with 8-bit argument, range 0...255 (Vout = 100/255 * 3.3V = ~1.3V)
 }
 ...
 ```

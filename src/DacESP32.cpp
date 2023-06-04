@@ -295,7 +295,11 @@ esp_err_t DacESP32::setCwFrequency(uint32_t frequency)
 
   uint8_t  clk8mDiv = 0, div, divMax = 0;
   uint32_t frequencyStep = 0, fcw = 0, deltaAbs;
-  float    stepSize, stepSizeTemp;
+  float 
+#if CORE_DEBUG_LEVEL >= 4   // prevents error with build flag '-Werror=unused-but-set-variable' & core debug levels < 4
+        stepSize, 
+#endif        
+        stepSizeTemp;
 
 #ifdef CW_FREQUENCY_HIGH_ACCURACY
   divMax = CK8M_DIV_MAX;
@@ -321,7 +325,9 @@ esp_err_t DacESP32::setCwFrequency(uint32_t frequency)
         deltaAbs = (uint32_t)abs(dtemp);
         clk8mDiv = div;
         frequencyStep = fstep;
+#if CORE_DEBUG_LEVEL >= 4    
         stepSize = stepSizeTemp;
+#endif
       }
       if (deltaAbs == 0) goto end;
     }
