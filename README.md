@@ -44,7 +44,7 @@ All CW generator frequency calculations are done with the assumption of RTC8M_CL
 Below definition enables a more accurate setting of the CW generator output frequency and is uncommented by default. However, the digital controller clock (dig_clk_rtc_freq = RTC8M_CLK / 1 + RTC_CNTL_CK8M_DIV_SEL) of both the DAC and ADC modules in the ESP32 might get changed (due to altered value of RTC_CNTL_CK8M_DIV_SEL). Comment below line out if this causes problems or high frequency accuracy is not needed.  
 `#define CW_FREQUENCY_HIGH_ACCURACY`  
 
-Below value defines the CW generators minimum number of voltage steps per cycle. Too low values will reduce the maximal possible CW output frequency though. Lowering the value will increase the minimum number of voltage steps/cycle and vice versa. For more infos see section CW generator below.  
+Below value defines the CW generators minimum number of voltage steps per cycle. Lowering the value will increase the minimum number of voltage steps per cycle and vice versa. Too low values will reduce the maximal possible CW output frequency though. For more infos see section CW generator below.  
 `#define SW_FSTEP_MAX  256`
 
 The maximum possible DAC output voltage depends on the actual supply voltage (VDD) of your ESP32. It will vary with the used LDO voltage regulator on your board and other factors. To generate a more precise output voltage: Generate max voltage level on a DAC channel with outputVoltage(255) and measure the real voltage on it (with only light or no load!). Then replace below value with the measured one.  
