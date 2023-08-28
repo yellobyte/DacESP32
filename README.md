@@ -57,7 +57,7 @@ There is only one CW generator in the ESP32. When enabled on both DAC channels t
 The frequency of the internal cosine waveform (CW) generator is easily set but somewhat limited in range and stepsize. However, for simple requirements using the internal CW generator instead of external DAC hardware might save you time & costs.
 
 According to ESP32 technical specs the CW frequency fcw is calculated as follows:  
-  - **fcw = RTC8M_CLK / (1 + RTC_CNTL_CK8M_DIV_SEL) * (SENS_SW_FSTEP / 65536)**  
+  - **fcw = (RTC8M_CLK / (1 + RTC_CNTL_CK8M_DIV_SEL)) * (SENS_SW_FSTEP / 65536)**  
 
 As above formula tells you, changing the frequency is only possible in defined steps.  
 With CK8M_DIV_SEL = 0 (default) a minimal frequency step is ~122 Hz, by setting CK8M_DIV_SEL to 7 (max) the stepsize gets greatly reduced to ~15.3 Hz. Function setCwFrequency() makes use of it if CW_FREQUENCY_HIGH_ACCURACY is defined.  
@@ -73,9 +73,10 @@ Actual measurements on a randomly picked ESP32 dev module showed notable deviati
 Hence RTC8M_CLK seemed to run notably higher (**3%**) than the 8MHz expected. However, defining CK8M_DFREQ_ADJUSTED = 161 for adjustment almost led to a complete match between calculated & measured frequencies.
 
 To assure at least 256 points per cycle the value for SW_FSTEP_MAX should not exceed 256 which still results in a possible highest output frequency of ~32kHz.  
-  - **SW_FSTEP_MAX = 128**  -->  voltage steps per cycle >= **512**, fmax **~15.6kHz**  
-  - **SW_FSTEP_MAX = 256**  -->  voltage steps per cycle >= **256**, fmax **~31.3kHz**   
-  - **SW_FSTEP_MAX = 512**  -->  voltage steps per cycle >= **128**, fmax **~62.6kHz**  
+  - **SW_FSTEP_MAX = 64**   -->  voltage steps per cycle >= **1024**, fmax **~7.8kHz**  
+  - **SW_FSTEP_MAX = 128**  -->  voltage steps per cycle >= **512**,  fmax **~15.6kHz**  
+  - **SW_FSTEP_MAX = 256**  -->  voltage steps per cycle >= **256**,  fmax **~31.3kHz**   
+  - **SW_FSTEP_MAX = 512**  -->  voltage steps per cycle >= **128**,  fmax **~62.6kHz**  
 
 Choose a value that fits your application best.  
 	
