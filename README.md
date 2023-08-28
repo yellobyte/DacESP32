@@ -72,7 +72,7 @@ Actual measurements on a randomly picked ESP32 dev module showed notable deviati
 
 Hence RTC8M_CLK seemed to run notably higher (**3%**) than the 8MHz expected. However, defining CK8M_DFREQ_ADJUSTED = 161 for adjustment almost led to a complete match between calculated & measured frequencies.
 
-To assure at least 256 points per cycle the value for SW_FSTEP should be limited to 256 which still results in a possible highest output frequency of ~32kHz.  
+To assure at least 256 points per cycle the value for SW_FSTEP_MAX should not exceed 256 which still results in a possible highest output frequency of ~32kHz.  
   - **SW_FSTEP_MAX = 128**  -->  voltage steps per cycle >= **512**, fmax **~15.6kHz**  
   - **SW_FSTEP_MAX = 256**  -->  voltage steps per cycle >= **256**, fmax **~31.3kHz**   
   - **SW_FSTEP_MAX = 512**  -->  voltage steps per cycle >= **128**, fmax **~62.6kHz**  
