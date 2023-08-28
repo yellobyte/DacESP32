@@ -54,7 +54,7 @@ The maximum possible DAC output voltage depends on the actual supply voltage (VD
 
 There is only one CW generator in the ESP32. When enabled on both DAC channels then the signal frequency on both channels will always be equal ! Phase, amplitude and offset can be set independently for both channels though.
 
-The frequency of the internal cosine waveform (CW) generator is easily set but somehow limited in range and stepsize. However, for simple requirements using the internal CW generator instead of external DAC hardware might save you time & costs.
+The frequency of the internal cosine waveform (CW) generator is easily set but somewhat limited in range and stepsize. However, for simple requirements using the internal CW generator instead of external DAC hardware might save you time & costs.
 
 According to ESP32 technical specs the CW frequency fcw is calculated as follows:  
   - **fcw = RTC8M_CLK / (1 + RTC_CNTL_CK8M_DIV_SEL) * (SENS_SW_FSTEP / 65536)**  
@@ -73,9 +73,9 @@ Actual measurements on a randomly picked ESP32 dev module showed notable deviati
 Hence RTC8M_CLK seemed to run notably higher (**3%**) than the 8MHz expected. However, defining CK8M_DFREQ_ADJUSTED = 161 for adjustment almost led to a complete match between calculated & measured frequencies.
 
 To assure at least 256 points per cycle the value for SW_FSTEP should be limited to 256 which still results in a possible highest output frequency of ~32kHz.  
-  - **SW_FSTEP_MAX = 128**  -->  voltage steps/cycle >= **512**, fmax **~15.6kHz**  
-  - **SW_FSTEP_MAX = 256**  -->  voltage steps/cycle >= **256**, fmax **~31.3kHz**   
-  - **SW_FSTEP_MAX = 512**  -->  voltage steps/cycle >= **128**, fmax **~62.6kHz**  
+  - **SW_FSTEP_MAX = 128**  -->  voltage steps per cycle >= **512**, fmax **~15.6kHz**  
+  - **SW_FSTEP_MAX = 256**  -->  voltage steps per cycle >= **256**, fmax **~31.3kHz**   
+  - **SW_FSTEP_MAX = 512**  -->  voltage steps per cycle >= **128**, fmax **~62.6kHz**  
 
 Choose a value that fits your application best.  
 	
