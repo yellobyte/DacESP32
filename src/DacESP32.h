@@ -73,15 +73,14 @@
 #define DAC_CW_OFFSET_DEFAULT 0
 #define CK8M_DIV_MAX 7
 
-// Master clock for digital controller section of both DAC & ADC systems.
-// According to spec approximately 8MHz.
+// Master clock for digital controller section of both DAC & ADC systems. 
+// According to spec the frequency is approximately 8MHz. Don't change value. 
+// Use build option CK8M_DFREQ_ADJUSTED for tuning the output frequency.
 #define CK8M 8000000UL
 
-// Type definitions needed only for older Espressif ESP32 framework versions:
-//  <=1.0.6 on ArduinoIDE resp. <=3.3.0 on PlatformIO
+// Type definitions needed only for older Espressif ESP32 framework 
+// versions <=1.0.6 on ArduinoIDE resp. <=3.3.0 on PlatformIO
 // All newer framework versions provide these definitions in dac_types.h.
-
-//#define DACESP32_TYPE_DEFS
 #ifdef DACESP32_TYPE_DEFS
 typedef enum {
     DAC_CW_SCALE_1 = 0x0,     // 1/1 (default)

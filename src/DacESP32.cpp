@@ -38,33 +38,39 @@
 
 #include "DacESP32.h"
 
-// All CW generator frequency calculations are done with the assumption 
-// of RTC8M_CLK (clock source that feeds both DACs controller section) to run 
-// near 8MHz. If your ESP32 exemplar is way off you might want to uncomment 
-// below line for adjustment/tuning. Default value is 172. Lowering the value 
-// will lower the frequency and vice versa. More detailed infos in Readme.md.
-//#define CK8M_DFREQ_ADJUSTED 172
+//
+// Below definitions can be altered with build options. There is no need  
+// to edit this file. Please have a look at Readme.md for details !!!
+//
+// For fine tuning the CW generator output frequency. Values higher than 172 
+// will increase the output frequency. Values lower than 172 will decrease it. 
+#if CK8M_DFREQ_ADJUSTED == 172
+#undef CK8M_DFREQ_ADJUSTED
+#endif
 
-// Enables a more accurate setting of the CW generator output frequency. Be aware,
-// the digital controller clock (dig_clk_rtc_freq) of both the DAC and ADC 
-// modules might get changed (due to altered value of RTC_CNTL_CK8M_DIV_SEL). 
-// Comment line out if this causes problems or high frequency accuracy is not 
-// needed.
+// Enables a more accurate setting of the CW generator output frequency. 
+// Can be disabled if it causes problems with ADC section in the ESP32. 
+#if !defined CW_FREQUENCY_HIGH_ACCURACY
 #define CW_FREQUENCY_HIGH_ACCURACY
+#elif CW_FREQUENCY_HIGH_ACCURACY == 0
+#undef CW_FREQUENCY_HIGH_ACCURACY
+#endif
 
-// Below value defines the CW generators minimum number of voltage steps per cycle.
-// Too low values will reduce the maximal possible CW output frequency though.
-// Lowering the value will increase the minimum number of voltage steps/cycle and
-// vice versa. More detailed infos about setting the value are found in Readme.md.
-// Choose a value that fits your application best.
+// Below value defines the CW generators minimum number of voltage steps per cycle as well
+// as the maximal possible CW output frequency. With default value 256 it is ~31.3kHz.
+// Lowering the value will increase the number of voltage steps/cycle and vice versa. 
+#ifndef SW_FSTEP_MAX
 #define SW_FSTEP_MAX  256
+#elif (SW_FSTEP_MAX != 64 && SW_FSTEP_MAX != 128 && SW_FSTEP_MAX != 256 && SW_FSTEP_MAX != 512 && SW_FSTEP_MAX != 1024)
+#error "Build option SW_FSTEP_MAX is defined incorrectly ! Allowed values: 64, 128, 256, 512 or 1024."
+#endif
 
-// The maximum possible DAC output voltage depends on the actual supply voltage (VDD) 
-// of your ESP32. It will vary with the used LDO voltage regulator on your board and
-// other factors. To generate a more precise output voltage: Generate max voltage 
-// level on a DAC channel with outputVoltage(255) and measure the real voltage on 
-// it (with only light or no load!). Then replace below value with the measured one.
-#define CHANNEL_VOLTAGE_MAX (float) 3.30
+// The maximum possible DAC output voltage depends on the actual supply voltage (VDD) of
+// your ESP32. It will vary with the used LDO voltage regulator on your board, the load on
+// the channels and other factors. Add build option with measured value if needed.
+#ifndef CHANNEL_VOLTAGE_MAX
+#define CHANNEL_VOLTAGE_MAX 3.30
+#endif
 
 #define CHANNEL_CHECK                               \
   if (m_channel == DAC_CHANNEL_UNDEFINED) {         \
@@ -82,6 +88,9 @@ uint32_t DacESP32::m_cwFrequency = 0;     // invalidate CW generator frequency
 //
 DacESP32::DacESP32(dac_channel_t channel) 
 {
+  // increase every time object is created
+  m_objectCount++;
+
   if (channel != DAC_CHANNEL_1 && channel != DAC_CHANNEL_2) {
     m_channel = DAC_CHANNEL_UNDEFINED;
     return;
@@ -104,9 +113,6 @@ DacESP32::DacESP32(dac_channel_t channel)
     // set CK8M_DIV = 0 (default)
     REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_CK8M_DIV_SEL, 0);
   }
-
-  // increase every time object is created
-  m_objectCount++;
   
   if (m_objectCount > DAC_CHANNEL_MAX) {
     log_w("DacESP32 objects created = %d > %d (DAC channels available) !", m_objectCount, DAC_CHANNEL_MAX);
@@ -128,12 +134,12 @@ DacESP32::DacESP32(gpio_num_t pin)
 //
 DacESP32::~DacESP32()
 {
+  // decrease object counter
+  m_objectCount--;
+
   if (m_channel != DAC_CHANNEL_UNDEFINED) {
     dac_output_disable(m_channel);
   }
-
-  // decrease counter when object is destroyed
-  m_objectCount--;
 
   // disable CW generator if no objects left
   if (m_objectCount == 0) {
@@ -202,16 +208,16 @@ esp_err_t DacESP32::disable()
 //
 // Set DAC output voltage. 
 // Parameter: value...DAC output voltage (in Volt)
-//                    Range 0...CHANNEL_VOLTAGE_MAX (see #definition above)
+//                    Range 0...CHANNEL_VOLTAGE_MAX (see definition above)
 //
 esp_err_t DacESP32::outputVoltage(float voltage)
 {
   if (voltage < 0 )
     voltage = 0;
-  else if (voltage > CHANNEL_VOLTAGE_MAX)
-    voltage = CHANNEL_VOLTAGE_MAX;
+  else if (voltage > (float) CHANNEL_VOLTAGE_MAX)
+    voltage = (float) CHANNEL_VOLTAGE_MAX;
 
-  return outputVoltage((uint8_t)((voltage / CHANNEL_VOLTAGE_MAX) * 255));
+  return outputVoltage((uint8_t)((voltage / (float) CHANNEL_VOLTAGE_MAX) * 255));
 }
 
 //
@@ -277,14 +283,11 @@ esp_err_t DacESP32::outputCW(uint32_t frequency, dac_cw_scale_t scale, dac_cw_ph
 }
 
 //
-// Sets CW frequency with lower accuracy (constant frequency steps ~122Hz) or higher accuracy 
-// (frequency steps from ~15Hz up to ~122Hz) when CW_FREQUENCY_HIGH_ACCURACY is defined, 
-// in this case CK8M_DIV_SEL gets changed. The highest frequency possible and the min. number 
-// of voltage steps per cycle depend on definition of SW_FSTEP_MAX.
-// Parameter: frequency - possible range is ~15...fmax
-//             fmax: ~62.6kHz (SW_FSTEP_MAX = 512 --> voltage steps/cycle >= 128)
-//             fmax: ~31.3kHz (SW_FSTEP_MAX = 256 --> voltage steps/cycle >= 256)
-//             fmax: ~15.6kHz (SW_FSTEP_MAX = 128 --> voltage steps/cycle >= 512)
+// The CW output frequency can be set from ~15Hz to fmax, which is ~31.2kHz by default.
+// The output frequency is set by altering the variables SENS_SAR_SW_FSTEP and RTC_CNTL_CK8M_DIV_SEL. 
+// The latter variable will stay untouched with build option CW_FREQUENCY_HIGH_ACCURACY=0. In this 
+// case the output frequency can only change in steps of ~122Hz. Without that build option various 
+// combinations of the two variables are tried in order to hit the target frequency as close as possible.
 //
 esp_err_t DacESP32::setCwFrequency(uint32_t frequency)
 {
@@ -296,7 +299,8 @@ esp_err_t DacESP32::setCwFrequency(uint32_t frequency)
   uint8_t  clk8mDiv = 0, div, divMax = 0;
   uint32_t frequencyStep = 0, fcw = 0, deltaAbs;
   float 
-#if CORE_DEBUG_LEVEL >= 4   // prevents error with build flag '-Werror=unused-but-set-variable' & core debug levels < 4
+// prevents error with build flag '-Werror=unused-but-set-variable' in combination with core debug levels < 4
+#if CORE_DEBUG_LEVEL >= 4  
         stepSize, 
 #endif        
         stepSizeTemp;
