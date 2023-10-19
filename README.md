@@ -76,7 +76,7 @@ Depending on your projects requirements always try to keep SW_FSTEP_MAX as low a
 
 `CHANNEL_VOLTAGE_MAX=Vreal`: The maximal possible DAC output voltage of your ESP32 depends on the supply voltage (VDD), the chip itself and the actual load on your DAC channels. It will slightly vary with every dev board you try and is usually between ~3.2...~3.4V. If it's way off then your ESP32 chip or the surrounding circuitry might be faulty !  
 
-To generate a more precise output voltage you can do this: Generate max voltage level on the DAC channel used with _outputVoltage(255)_ and measure the real output voltage, preferably with the designated load. Then add this build option holding the measured value to your config file, e.g.: CHANNEL_VOLTAGE_MAX=3.28.  
+To generate a more precise output voltage you can do this: Generate max voltage level on the DAC channel used, e.g. with _outputVoltage(255)_ and measure the real output voltage, preferably with the designated load. Then add this build option holding the measured value to your config file, e.g.: CHANNEL_VOLTAGE_MAX=3.28.  
 
 ## :information_source: The integrated cosine waveform (CW) generator 
 
