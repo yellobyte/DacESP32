@@ -57,7 +57,7 @@ In case you get build errors like **'_definition for dac_cw_scale_t missing_'** 
 
 ### :hammer_and_wrench: Available library build options
 
-**None** of below build options are required for building the library. If you just want to play around with the ESP32 DAC channels, generate some sine waves or set voltage levels with moderate accuracy, don't worry about them.  
+Actually **none** of below build options are required for building the library. If you just want to play around with the ESP32 DAC channels, generate some sine waves or set voltage levels with moderate accuracy, don't worry about them.  
 
 However, if you want to generate sinus signals with a frequency higher than ~31.5kHz or with higher frequency accuracy, more or less than 256 voltage steps per cycle or voltage levels with higher voltage accuracy then below build options will be helpful.
 
