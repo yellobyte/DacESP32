@@ -69,9 +69,10 @@
 #define RTCIO_PAD_PDAC_DAC_XPD_FORCE_V  0x1
 #define RTCIO_PAD_PDAC_DAC_XPD_FORCE_S  10
 
-#define DAC_CHANNEL_UNDEFINED (dac_channel_t) -1
+#define DAC_CHAN_UNDEFINED (dac_channel_t) -1
+#define DAC_CHAN_MAX       (dac_channel_t)  2
 #define DAC_CW_OFFSET_DEFAULT 0
-#define CK8M_DIV_MAX 7
+#define CK8M_DIV_MAX          7
 
 // Master clock for digital controller section of both DAC & ADC systems. 
 // According to spec the frequency is approximately 8MHz. Don't change value. 

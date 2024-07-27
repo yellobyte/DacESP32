@@ -73,7 +73,7 @@
 #endif
 
 #define CHANNEL_CHECK                               \
-  if (m_channel == DAC_CHANNEL_UNDEFINED) {         \
+  if (m_channel == DAC_CHAN_UNDEFINED) {            \
     log_e("channel setting invalid");               \
     return ESP_FAIL;                                \
   } 
@@ -92,7 +92,7 @@ DacESP32::DacESP32(dac_channel_t channel)
   m_objectCount++;
 
   if (channel != DAC_CHANNEL_1 && channel != DAC_CHANNEL_2) {
-    m_channel = DAC_CHANNEL_UNDEFINED;
+    m_channel = DAC_CHAN_UNDEFINED;
     return;
   }
 
@@ -114,8 +114,8 @@ DacESP32::DacESP32(dac_channel_t channel)
     REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_CK8M_DIV_SEL, 0);
   }
   
-  if (m_objectCount > DAC_CHANNEL_MAX) {
-    log_w("DacESP32 objects created = %d > %d (DAC channels available) !", m_objectCount, DAC_CHANNEL_MAX);
+  if (m_objectCount > DAC_CHAN_MAX) {
+    log_w("DacESP32 objects created = %d > %d (DAC channels available) !", m_objectCount, DAC_CHAN_MAX);
   }
 }
 
@@ -125,7 +125,7 @@ DacESP32::DacESP32(dac_channel_t channel)
 //
 DacESP32::DacESP32(gpio_num_t pin) 
   : DacESP32((dac_channel_t)(pin == DAC_CHANNEL_1_GPIO_NUM) ? DAC_CHANNEL_1 : 
-                            (pin == DAC_CHANNEL_2_GPIO_NUM) ? DAC_CHANNEL_2 : DAC_CHANNEL_UNDEFINED)
+                            (pin == DAC_CHANNEL_2_GPIO_NUM) ? DAC_CHANNEL_2 : DAC_CHAN_UNDEFINED)
 {
 }
 
@@ -137,7 +137,7 @@ DacESP32::~DacESP32()
   // decrease object counter
   m_objectCount--;
 
-  if (m_channel != DAC_CHANNEL_UNDEFINED) {
+  if (m_channel != DAC_CHAN_UNDEFINED) {
     dac_output_disable(m_channel);
   }
 
@@ -169,7 +169,7 @@ esp_err_t DacESP32::setChannel(dac_channel_t channel)
   }
 
   if (m_channel != channel) {
-    if (m_channel != DAC_CHANNEL_UNDEFINED) {
+    if (m_channel != DAC_CHAN_UNDEFINED) {
       dac_output_disable(m_channel);
     }
     dac_output_disable(channel);
@@ -182,7 +182,7 @@ esp_err_t DacESP32::setChannel(dac_channel_t channel)
 esp_err_t DacESP32::setPin(gpio_num_t pin)
 {
   return setChannel((dac_channel_t)(pin == DAC_CHANNEL_1_GPIO_NUM) ? DAC_CHANNEL_1 : 
-                                   (pin == DAC_CHANNEL_2_GPIO_NUM) ? DAC_CHANNEL_2 : DAC_CHANNEL_UNDEFINED);
+                                   (pin == DAC_CHANNEL_2_GPIO_NUM) ? DAC_CHANNEL_2 : DAC_CHAN_UNDEFINED);
 }
 
 //
