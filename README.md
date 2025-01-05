@@ -29,7 +29,9 @@ In **Arduino IDE** open the **Library Manager** and go to menu items **Sketch** 
 
 In **VSCode/PlatformIO** click the **platformio sidebar icon**, open the **libraries** view, search for DacESP32 and click on **Add to Project**.
 
-All examples were build & tested with ArduinoIDE V1.8.19/2.2.1 and VSCode/PlatformIO (Core 6.1.11 - Home 3.4.4).  
+All examples were build & tested with ArduinoIDE V2.3.4/ESP32 Core V3.0.7 and VSCode/PlatformIO[PIOArduino] (Core 6.1.16 - Home 3.4.4) with ESP32 Core V3.1.0.  
+
+As of library **version 2.0.0** the Arduino ESP32 Core version **3.0.0** or higher is required for a successful build. The library has been redesigned and now uses *driver/dac_oneshot.h* and *driver/dac_cosine.h* instead of the deprecated *driver/dac.h*. 
 
 As of library **version 1.1.0** certain library parameters can be altered with **build options**. There is no need to edit parameter definitions in DacESP32.cpp anymore. Build options can be customized as follows:
 
@@ -51,13 +53,11 @@ build_flags =
   -DCHANNEL_VOLTAGE_MAX=3.35
 ```
 ### :bangbang: **ATTENTION:**  
-Older Espressif ESP32 framework versions (<=1.0.6 on ArduinoIDE resp. <=3.3.0 on PlatformIO) have some needed type definitions missing.  
-
-In case you get build errors like **'_definition for dac_cw_scale_t missing_'** or **'_definition for dac_cw_phase_t missing_'** then please add build option `DACESP32_TYPE_DEFS` to your config file as explained above.
+Older Espressif ESP32 framework versions have some needed type definitions missing and compiling this library **up to version 1.1.1** produces errors like **'_definition for dac_cw_scale_t missing_'** or **'_definition for dac_cw_phase_t missing_'**. In this case please add build option `DACESP32_TYPE_DEFS` to your config file as explained above.
 
 ### :hammer_and_wrench: Available library build options
 
-Actually **none** of below build options are required for building the library. If you just want to play around with the ESP32 DAC channels, generate some sine waves or set voltage levels with moderate accuracy, don't worry about them.  
+Actually **none** of below build options are required for successfully building the library. If you just want to play around with the ESP32 DAC channels, generate some sine waves or set voltage levels with moderate accuracy, don't worry about them.  
 
 However, if you want to generate sinus signals with a frequency higher than ~31.5kHz or with higher frequency accuracy, more or less than 256 voltage steps per cycle or voltage levels with higher voltage accuracy then below build options will be helpful.
 
@@ -72,7 +72,9 @@ However, if you want to generate sinus signals with a frequency higher than ~31.
 - **SW_FSTEP_MAX=512**  --->  voltage steps per cycle **>=128**,  fmax **~62.6kHz**  
 - **SW_FSTEP_MAX=1024**  --->  voltage steps per cycle **>=64**,  fmax **~125.2kHz**  
 
-Depending on your projects requirements always try to keep SW_FSTEP_MAX as low as possible to get max voltage steps/cycle and with it a cleaner signal. 
+Depending on your projects requirements always try to keep SW_FSTEP_MAX as low as possible to get max voltage steps/cycle and with it a cleaner signal.  
+
+IMPORTANT: Above definition gets applied only without build option 'CW_FREQUENCY_HIGH_ACCURACY=0'.
 
 `CHANNEL_VOLTAGE_MAX=Vreal`: The maximal possible DAC output voltage of your ESP32 depends on the supply voltage (VDD), the chip itself and the actual load on your DAC channels. It will slightly vary with every dev board you try and is usually between ~3.2...~3.4V. If it's way off then your ESP32 chip or the surrounding circuitry might be faulty !  
 
@@ -95,8 +97,9 @@ RTC8M_CLK in above formula is an internal RC oscillator clock (belonging to the 
   - Calculated: 31250.00 Hz, measured: 32226.4 Hz  
 
 Hence RTC8M_CLK seemed to be approximately **3%** higher than the 8MHz expected. Tuning the CW generator downwards with build option `CK8M_DFREQ_ADJUSTED=161` led to an almost perfect match between calculated & measured frequencies.
-	
-The digital controller clock of both the DAC **and** ADC sections in the ESP32 is calculated as follows: dig_clk_rtc_freq = RTC8M_CLK / 1 + RTC_CNTL_CK8M_DIV_SEL. Which is actually the first term of the formula above. If you therefore prefer RTC_CNTL_CK8M_DIV_SEL to stay untouched then use build option `CW_FREQUENCY_HIGH_ACCURACY=0`.  
+
+**Please note:**  
+The digital controller clock of both the DAC **and** ADC sections in the ESP32 is calculated as follows: dig_clk_rtc_freq = RTC8M_CLK / 1 + RTC_CNTL_CK8M_DIV_SEL. Which is actually the first term of the formula above. If you therefore prefer dig_clk_rtc_freq to stay untouched then use build option `CW_FREQUENCY_HIGH_ACCURACY=0`.  
 
 ## :file_folder: Documentation
 
