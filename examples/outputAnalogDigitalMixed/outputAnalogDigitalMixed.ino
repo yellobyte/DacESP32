@@ -2,12 +2,12 @@
   outputAnalogDigitalMixed.ino
 
   The ESP32 contains two 8-bit DAC output channels.
-  DAC channel 1 is GPIO25 (Pin 25) and DAC channel 2 is GPIO26 (Pin 26).
+  DAC channel 1 is assigned to GPIO25 (Pin 25) and DAC channel 2 is assigned to GPIO26 (Pin 26).
 
   This sketch generates a ~500Hz sinus signal on DAC channel 1 (GPIO pin 25)
   followed by a ~500Hz digital output signal, 5 seconds each & alternatingly. 
 
-  Last updated 2022-06-11, ThJ <yellobyte@bluewin.ch>
+  Last updated 2025-01-04, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>

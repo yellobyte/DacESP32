@@ -2,12 +2,12 @@
   outputVoltage.ino
 
   The ESP32 contains two 8-bit DAC output channels.
-  DAC channel 1 is GPIO25 (Pin 25) and DAC channel 2 is GPIO26 (Pin 26).
+  DAC channel 1 is assigned to GPIO25 (Pin 25) and DAC channel 2 is assigned to GPIO26 (Pin 26).
 
-  This sketch activates only DAC channel 1 and generates a sawtooth waveform
-  with a very low frequency (~4Hz). 
+  This sketch activates only DAC channel 1 and generates a sawtooth waveform with a very low 
+  frequency (~4Hz). 
 
-  Last updated 2022-08-30, ThJ <yellobyte@bluewin.ch>
+  Last updated 2025-01-04, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>

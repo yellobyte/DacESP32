@@ -40,7 +40,7 @@
 
 //
 // Below definitions can be altered with build options. There is no need  
-// to edit this file. Please have a look at Readme.md for details !!!
+// to edit this file. Please have a look at Readme.md for details !
 //
 // For fine tuning the CW generator output frequency. Values higher than 172 
 // will increase the output frequency. Values lower than 172 will decrease it. 
@@ -59,6 +59,7 @@
 // Below value defines the CW generators minimum number of voltage steps per cycle as well
 // as the maximal possible CW output frequency. With default value 256 it is ~31.3kHz.
 // Lowering the value will increase the number of voltage steps/cycle and vice versa. 
+// IMPORTANT: This definition is only valid without build option 'CW_FREQUENCY_HIGH_ACCURACY=0'.
 #ifndef SW_FSTEP_MAX
 #define SW_FSTEP_MAX  256
 #elif (SW_FSTEP_MAX != 64 && SW_FSTEP_MAX != 128 && SW_FSTEP_MAX != 256 && SW_FSTEP_MAX != 512 && SW_FSTEP_MAX != 1024)
@@ -72,50 +73,79 @@
 #define CHANNEL_VOLTAGE_MAX 3.30
 #endif
 
-#define CHANNEL_CHECK                               \
-  if (m_channel == DAC_CHAN_UNDEFINED) {            \
-    log_e("channel setting invalid");               \
-    return ESP_FAIL;                                \
+#define CHANNEL_CHECK(channel)          \
+  if (channel == DAC_CHAN_UNDEFINED) {  \
+    log_e("channel setting invalid");   \
+    return ESP_FAIL;                    \
   } 
 
-// initialize static members of class (shared by all created objects)
-size_t   DacESP32::m_objectCount = 0;     // clear object count
-uint32_t DacESP32::m_cwFrequency = 0;     // invalidate CW generator frequency
+#define FREQUENCY_CHECK(frequency)                                       \
+  if (frequency < 16) {                                                  \
+    log_e("invalid parameter: frequency (%d) out of range", frequency);  \
+    return ESP_ERR_NOT_SUPPORTED;                                        \
+  }
+
+// initialize static members of class (shared by all objects of this class)
+size_t   DacESP32::m_objectCount = 0;
+uint32_t DacESP32::m_cwFrequency = 0;
+bool     DacESP32::m_ch0_locked = 0;
+bool     DacESP32::m_ch1_locked = 0;
 
 //
 // Class constructor.
-// Parameter: channel...assigned DAC channel
+// Parameter: channel...assigned DAC channel (DAC_CHAN_0 or DAC_CHAN_1)
 //
 DacESP32::DacESP32(dac_channel_t channel) 
 {
-  // increase every time object is created
-  m_objectCount++;
+  m_channel = DAC_CHAN_UNDEFINED;
 
-  if (channel != DAC_CHANNEL_1 && channel != DAC_CHANNEL_2) {
-    m_channel = DAC_CHAN_UNDEFINED;
+  m_oneshot_value = -1;
+  m_oneshot_cfg.chan_id = m_channel;
+  m_oneshot_handle = DAC_ONE_HANDLE_UNDEFINED;
+
+  m_cosine_cfg.chan_id = m_channel;
+  m_cosine_handle = DAC_COS_HANDLE_UNDEFINED;
+
+  if (++m_objectCount > DAC_CHAN_MAX) {
+    log_e("DacESP32 objects created = %d > %d (max DAC channels) !", m_objectCount, DAC_CHAN_MAX);
     return;
   }
 
-  m_channel = channel;
-  dac_output_disable(m_channel);
+  if (channel == DAC_CHAN_0) {
+    if (m_ch0_locked) { log_e("DAC channel 0 already in use"); return; }
+    m_ch0_locked = true;
+    m_channel = DAC_CHAN_0;
+    //m_gpio_pin = (gpio_num_t)DAC_CHAN0_GPIO_NUM;
+    m_oneshot_cfg.chan_id = m_channel;
+    m_cosine_cfg.chan_id = m_channel;
+  }
+  else if (channel == DAC_CHAN_1) {
+    if (m_ch1_locked) { log_e("DAC channel 1 already in use"); return; }
+    m_ch1_locked = true;
+    m_channel = DAC_CHAN_1;
+    //m_gpio_pin = (gpio_num_t)DAC_CHAN1_GPIO_NUM;
+    m_oneshot_cfg.chan_id = m_channel;
+    m_cosine_cfg.chan_id = m_channel;
+  }
+  else {
+    log_e("channel setting invalid");
+    return;
+  }
 
   // default CW generator settings for this channel
-  m_cwScale = DAC_CW_SCALE_1;
-  m_cwPhase = DAC_CW_PHASE_0;
-  m_cwOffset = DAC_CW_OFFSET_DEFAULT;
+  m_cosine_cfg.clk_src = DAC_COSINE_CLK_SRC_DEFAULT,
+  m_cosine_cfg.atten = DAC_COSINE_ATTEN_DB_0,
+  m_cosine_cfg.phase = DAC_COSINE_PHASE_0,
+  m_cosine_cfg.offset = DAC_CW_OFFSET_DEFAULT,
+  m_cosine_cfg.flags.force_set_freq = true;
 
-  // frequency setting common to all objects
+  // frequency setting shared by all objects
+  m_cosine_cfg.freq_hz = m_cwFrequency;
   if (m_cwFrequency == 0) {
     // CW generator not yet in use
 #ifdef CK8M_DFREQ_ADJUSTED
     REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_CK8M_DFREQ, CK8M_DFREQ_ADJUSTED);
 #endif
-    // set CK8M_DIV = 0 (default)
-    REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_CK8M_DIV_SEL, 0);
-  }
-  
-  if (m_objectCount > DAC_CHAN_MAX) {
-    log_w("DacESP32 objects created = %d > %d (DAC channels available) !", m_objectCount, DAC_CHAN_MAX);
   }
 }
 
@@ -124,8 +154,8 @@ DacESP32::DacESP32(dac_channel_t channel)
 // Parameter: pin...assigned GPIO pin
 //
 DacESP32::DacESP32(gpio_num_t pin) 
-  : DacESP32((dac_channel_t)(pin == DAC_CHANNEL_1_GPIO_NUM) ? DAC_CHANNEL_1 : 
-                            (pin == DAC_CHANNEL_2_GPIO_NUM) ? DAC_CHANNEL_2 : DAC_CHAN_UNDEFINED)
+  : DacESP32((dac_channel_t)(pin == DAC_CHAN0_GPIO_NUM) ? DAC_CHAN_0 : 
+                            (pin == DAC_CHAN1_GPIO_NUM) ? DAC_CHAN_1 : DAC_CHAN_UNDEFINED)
 {
 }
 
@@ -134,17 +164,26 @@ DacESP32::DacESP32(gpio_num_t pin)
 //
 DacESP32::~DacESP32()
 {
+  if (m_oneshot_handle != DAC_ONE_HANDLE_UNDEFINED) {
+    dac_oneshot_del_channel(m_oneshot_handle);
+    log_d("dac oneshot delete: m_oneshot_handle=0x%x, channel=%d", (int)m_oneshot_handle, (int)m_oneshot_cfg.chan_id);
+  }
+  if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
+    if (((dac_cosine_s_ *)m_cosine_handle)->is_started)
+      dac_cosine_stop(m_cosine_handle);
+    dac_cosine_del_channel(m_cosine_handle);
+    log_d("dac cosine delete: m_cosine_handle=0x%x, channel=%d", (int)m_cosine_handle, (int)m_cosine_cfg.chan_id);
+  }
+
+  if (m_channel == DAC_CHAN_0) { 
+    m_ch0_locked = false;
+  }
+  else if (m_channel == DAC_CHAN_1) {
+    m_ch1_locked = false;
+  }
+  
   // decrease object counter
   m_objectCount--;
-
-  if (m_channel != DAC_CHAN_UNDEFINED) {
-    dac_output_disable(m_channel);
-  }
-
-  // disable CW generator if no objects left
-  if (m_objectCount == 0) {
-    CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL1_REG, SENS_SW_TONE_EN);
-  }
 }
 
 //
@@ -153,36 +192,14 @@ DacESP32::~DacESP32()
 //
 esp_err_t DacESP32::getGPIOnum(gpio_num_t *gpio_num)
 {
-  CHANNEL_CHECK;
+  CHANNEL_CHECK(m_channel);
 
-  return dac_pad_get_io_num(m_channel, gpio_num);
-}
-
-//
-// (Re-)Assign DAC channel.
-//
-esp_err_t DacESP32::setChannel(dac_channel_t channel)
-{
-  if (channel != DAC_CHANNEL_1 && channel != DAC_CHANNEL_2) {
-    log_e("parameter DAC channel/pin invalid");
-    return ESP_ERR_INVALID_ARG;
-  }
-
-  if (m_channel != channel) {
-    if (m_channel != DAC_CHAN_UNDEFINED) {
-      dac_output_disable(m_channel);
-    }
-    dac_output_disable(channel);
-    m_channel = channel;
-  }
+  if (m_channel == DAC_CHAN_0)
+      *gpio_num = GPIO_NUM_25;
+  else
+      *gpio_num = GPIO_NUM_26;
 
   return ESP_OK;
-}
-
-esp_err_t DacESP32::setPin(gpio_num_t pin)
-{
-  return setChannel((dac_channel_t)(pin == DAC_CHANNEL_1_GPIO_NUM) ? DAC_CHANNEL_1 : 
-                                   (pin == DAC_CHANNEL_2_GPIO_NUM) ? DAC_CHANNEL_2 : DAC_CHAN_UNDEFINED);
 }
 
 //
@@ -190,9 +207,20 @@ esp_err_t DacESP32::setPin(gpio_num_t pin)
 //
 esp_err_t DacESP32::enable()
 {
-  CHANNEL_CHECK;
+  CHANNEL_CHECK(m_channel);
 
-  return dac_output_enable(m_channel);
+  if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
+    if (!((dac_cosine_s_ *)m_cosine_handle)->is_started)
+      return dac_cosine_start(m_cosine_handle);
+    else
+      return ESP_OK;
+  }
+  if (m_oneshot_value >= 0) {
+    return outputVoltage((uint8_t)m_oneshot_value);
+  }
+
+  log_w("no oneshot/cosine DAC channel registered");
+  return ESP_OK;  
 }
 
 //
@@ -200,9 +228,57 @@ esp_err_t DacESP32::enable()
 //
 esp_err_t DacESP32::disable()
 {
-  CHANNEL_CHECK;
+  CHANNEL_CHECK(m_channel);
 
-  return dac_output_disable(m_channel);
+  if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
+    if (((dac_cosine_s_ *)m_cosine_handle)->is_started)
+      return dac_cosine_stop(m_cosine_handle);
+    else
+      return ESP_OK;
+  }
+  if (m_oneshot_handle != DAC_ONE_HANDLE_UNDEFINED) {
+    esp_err_t err = dac_oneshot_del_channel(m_oneshot_handle);
+    m_oneshot_handle = DAC_ONE_HANDLE_UNDEFINED;
+    return err;
+  }     
+  
+  log_w("no oneshot/cosine DAC channel registered");
+  return ESP_OK;
+}
+
+//
+// Set DAC output voltage. 
+// Parameter: value...DAC output value
+//                    DAC output is 8-bit. Maximum (255) corresponds to ~VDD.
+//                    Range 0...255
+//
+esp_err_t DacESP32::outputVoltage(uint8_t value)
+{
+  esp_err_t err;
+  
+  CHANNEL_CHECK(m_oneshot_cfg.chan_id);
+
+  if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
+    // stop and delete DAC cosine channel 
+    if (((dac_cosine_s_ *)m_cosine_handle)->is_started)
+      dac_cosine_stop(m_cosine_handle);
+    log_d("dac cosine delete: m_cosine_handle=0x%x, channel=%d", (int)m_cosine_handle, (int)m_cosine_cfg.chan_id);
+    dac_cosine_del_channel(m_cosine_handle);
+    m_cosine_handle = DAC_COS_HANDLE_UNDEFINED;
+  }  
+
+  if (m_oneshot_handle == DAC_ONE_HANDLE_UNDEFINED) {
+    // register DAC oneshot channel
+    if ((err = dac_oneshot_new_channel(&m_oneshot_cfg, &m_oneshot_handle)) != ESP_OK) {
+      log_e("dac_oneshot_new_channel() error %d, channel=%d", err, (int)m_oneshot_cfg.chan_id);
+      return(err);
+    }
+    log_d("dac oneshot init: m_oneshot_handle=0x%x, channel=%d", (int)m_oneshot_handle, (int)m_oneshot_cfg.chan_id);
+  }
+
+  m_oneshot_value = value;
+
+  return dac_oneshot_output_voltage(m_oneshot_handle, value);
 }
 
 //
@@ -221,98 +297,99 @@ esp_err_t DacESP32::outputVoltage(float voltage)
 }
 
 //
-// Set DAC output voltage. 
-// Parameter: value...DAC output value
-//                    DAC output is 8-bit. Maximum (255) corresponds to ~VDD.
-//                    Range 0...255
+// Config CW generator and enable output on selected channel.
 //
-esp_err_t DacESP32::outputVoltage(uint8_t value)
-{
-  CHANNEL_CHECK;
-
-  if (m_channel == DAC_CHANNEL_1) {
-    // disable CW generator on channel 1
-    CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
-    // enable DAC channel output
-    SET_PERI_REG_MASK(RTC_IO_PAD_DAC1_REG, RTCIO_PAD_PDAC1_MUX_SEL | RTC_IO_PDAC1_XPD_DAC | RTC_IO_PDAC1_DAC_XPD_FORCE);
-    // setting DAC output value
-    SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, value, RTC_IO_PDAC1_DAC_S);
-  }
-  else {
-    // disable CW generator on channel 2
-    CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN2_M);
-    // enable DAC channel output
-    SET_PERI_REG_MASK(RTC_IO_PAD_DAC2_REG, RTCIO_PAD_PDAC2_MUX_SEL | RTC_IO_PDAC2_XPD_DAC | RTC_IO_PDAC2_DAC_XPD_FORCE);
-    // setting DAC output value
-    SET_PERI_REG_BITS(RTC_IO_PAD_DAC2_REG, RTC_IO_PDAC2_DAC, value, RTC_IO_PDAC2_DAC_S);
-  }
-
-  return ESP_OK;
-}
-
+// The ESP32 Arduino framework by default can only generate CW output frequencies above 130Hz and only in steps of ~122Hz.
 //
-// Following the routines for using the Cosine Waveform (CW) Generator.
-// Readme.md provides more technical details about the CW generator. 
+// However, this library allows to set the CW frequency more accurately starting from 16Hz and upwards.
+// This is done by bypassing Espressif's driver API and altering register values for SENS_SAR_SW_FSTEP and 
+// RTC_CNTL_CK8M_DIV_SEL directly in the ESP32 core. Various combinations of the two variables are tried in order 
+// to hit the target frequency as close as possible.
 //
-// Config CW generator & enable for output.
+// Note: By doing so the digital controller clock of both the DAC and (!) ADC sections in the ESP32 might get changed. 
+//       If this causes problems with the ADC section in the ESP32 then use build option 'CW_FREQUENCY_HIGH_ACCURACY=0'
+//       which brings back the default behaviour as explained above.
 //
 esp_err_t DacESP32::outputCW(uint32_t frequency)
 {
-  return outputCW(frequency, m_cwScale, m_cwPhase, m_cwOffset);
+  return outputCW(frequency, m_cosine_cfg.atten, m_cosine_cfg.phase, m_cosine_cfg.offset);
 }
 
-esp_err_t DacESP32::outputCW(uint32_t frequency, dac_cw_scale_t scale, dac_cw_phase_t phase, int8_t offset)
+esp_err_t DacESP32::outputCW(uint32_t frequency, dac_cosine_atten_t atten, dac_cosine_phase_t phase, int8_t offset)
 {
-  CHANNEL_CHECK;
+  esp_err_t err;
 
-  esp_err_t result;
+  CHANNEL_CHECK(m_cosine_cfg.chan_id);
+  FREQUENCY_CHECK(frequency);
+  m_cosine_cfg.freq_hz = m_cwFrequency = frequency;
+  m_cosine_cfg.atten = atten;
+  m_cosine_cfg.phase = phase;
+  m_cosine_cfg.offset = offset;
+  m_oneshot_value = -1;
+
+  // Delete DAC oneshot channel if active
+  if (m_oneshot_handle != DAC_ONE_HANDLE_UNDEFINED) {
+    log_d("dac oneshot delete: m_oneshot_handle=0x%x, channel=%d", (int)m_oneshot_handle, (int)m_oneshot_cfg.chan_id);
+    dac_oneshot_del_channel(m_oneshot_handle);
+    m_oneshot_handle = DAC_ONE_HANDLE_UNDEFINED;
+  }   
   
-  // configure CW settings
-  if ((result = setCwFrequency(frequency)) != ESP_OK ||
-      (result = setCwScale(scale)) != ESP_OK ||
-      (result = setCwPhase(phase)) != ESP_OK ||
-      (result = setCwOffset(offset)) != ESP_OK) {
-
-    return result;
+  // Changing DAC parameters is only possible at registration, so unregister first if necessary
+  if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
+    if (((dac_cosine_s_ *)m_cosine_handle)->is_started)
+      dac_cosine_stop(m_cosine_handle);
+    log_d("dac cosine delete: m_cosine_handle=0x%x, channel=%d", (int)m_cosine_handle, (int)m_cosine_cfg.chan_id);
+    dac_cosine_del_channel(m_cosine_handle);
+    m_cosine_handle = DAC_COS_HANDLE_UNDEFINED;
   }
 
-  dac_output_enable(m_channel);
-  dacCwSelect();
+#ifdef CW_FREQUENCY_HIGH_ACCURACY
+  uint8_t clkdiv;
+  uint32_t sw_fstep;
+
+  if ((err = calcFrequSettings(m_cosine_cfg.freq_hz, &clkdiv, &sw_fstep)) != ESP_OK) return err;
+  // frequencies below 130Hz (default fmin) will only pass the new driver APIs frequency check if rtc_clk_freq is reduced
+  if (frequency < 130) REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_CK8M_DIV_SEL, CK8M_DIV_MAX);
+#endif
+
+  if ((err = dac_cosine_new_channel(&m_cosine_cfg, &m_cosine_handle)) != ESP_OK) {
+    if (err == ESP_ERR_NOT_SUPPORTED)
+      log_e("invalid parameter: frequency (%d) out of range", (int)m_cosine_cfg.freq_hz);
+    else
+      log_e("dac_cosine_new_channel() error %d, channel=%d", err, (int)m_cosine_cfg.chan_id);
+    return(err);
+  }
+  log_d("dac cosine init: m_cosine_handle=0x%x, channel=%d", (int)m_cosine_handle, (int)m_cosine_cfg.chan_id);
+
+#ifdef CW_FREQUENCY_HIGH_ACCURACY
+  REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_CK8M_DIV_SEL, clkdiv);
+  SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL1_REG, SENS_SW_FSTEP, sw_fstep, SENS_SW_FSTEP_S);
+#endif
+  dac_cosine_start(m_cosine_handle);
 
   return ESP_OK;
 }
 
 //
-// The CW output frequency can be set from ~15Hz to fmax, which is ~31.2kHz by default.
-// The output frequency is set by altering the variables SENS_SAR_SW_FSTEP and RTC_CNTL_CK8M_DIV_SEL. 
-// The latter variable will stay untouched with build option CW_FREQUENCY_HIGH_ACCURACY=0. In this 
-// case the output frequency can only change in steps of ~122Hz. Without that build option various 
-// combinations of the two variables are tried in order to hit the target frequency as close as possible.
+// Helper function: calculate DAC parameters for higher frequency accuracy
 //
-esp_err_t DacESP32::setCwFrequency(uint32_t frequency)
+esp_err_t DacESP32::calcFrequSettings(const uint32_t frequency, uint8_t *clkdiv, uint32_t *sw_fstep)
 {
-  if (frequency == 0) {
-    log_e("invalid parameter: frequency (%d) out of range", frequency);
-    return ESP_ERR_INVALID_ARG;
-  }
-
   uint8_t  clk8mDiv = 0, div, divMax = 0;
-  uint32_t frequencyStep = 0, fcw = 0, deltaAbs;
+  uint32_t swfstep = 0, fcw = 0, deltaAbs;
   float 
-// prevents error with build flag '-Werror=unused-but-set-variable' in combination with core debug levels < 4
+// prevents error with build flag '-Werror=unused-but-set-variable' combined with core debug levels < 4
 #if CORE_DEBUG_LEVEL >= 4  
-        stepSize, 
+        stepSize = 0, 
 #endif        
         stepSizeTemp;
 
-#ifdef CW_FREQUENCY_HIGH_ACCURACY
   divMax = CK8M_DIV_MAX;
-#endif
 
   // delta to start with (biggest possible stepsize + 1)
   deltaAbs = ((float)CK8M / 65536UL) + 1;
  
-  // searching output frequency closest to target frequency
+  // searching best combination for RTC_CNTL_CK8M_DIV_SEL & SENS_SW_FSTEP
   for (div = 0; div <= divMax; ) {
     stepSizeTemp = (((float)CK8M / (1 + div)) / 65536UL);
     for (uint16_t fstep = 1; fstep <= SW_FSTEP_MAX; fstep++) {
@@ -328,7 +405,7 @@ esp_err_t DacESP32::setCwFrequency(uint32_t frequency)
         // better combination found
         deltaAbs = (uint32_t)abs(dtemp);
         clk8mDiv = div;
-        frequencyStep = fstep;
+        swfstep = fstep;
 #if CORE_DEBUG_LEVEL >= 4    
         stepSize = stepSizeTemp;
 #endif
@@ -344,134 +421,128 @@ esp_err_t DacESP32::setCwFrequency(uint32_t frequency)
   }
 end:
 
-  if (clk8mDiv == 0 && frequencyStep == 0) {
+  if (clk8mDiv == 0 && swfstep == 0) {
     // no suitable combination found
     log_e("invalid parameter: frequency (%d) out of range", frequency);
-    return ESP_ERR_INVALID_ARG;
+    return ESP_ERR_NOT_SUPPORTED;
   }
 
-  log_d("ftarget=%d, fcw=%d, abs(delta)=%d, clk8mDiv=%d, frequencyStep=%d, stepSize=%f", 
-        frequency, (uint32_t)(stepSize * frequencyStep), deltaAbs, clk8mDiv, frequencyStep, stepSize);
+  log_d("ftarget=%dHz, fcw=%dHz, abs(delta)=%d, clk8mDiv=%d, sw_fstep=%d, stepSize=%fHz", 
+        frequency, (uint32_t)(stepSize * swfstep), deltaAbs, clk8mDiv, swfstep, stepSize);
 
-#ifdef CW_FREQUENCY_HIGH_ACCURACY
-  REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_CK8M_DIV_SEL, clk8mDiv);
-#endif
-  SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL1_REG, SENS_SW_FSTEP, frequencyStep, SENS_SW_FSTEP_S);
+  // return calculated values
+  *clkdiv = clk8mDiv;
+  *sw_fstep = swfstep;
 
-  m_cwFrequency = frequency;
+  return ESP_OK;
+}
+
+//
+// Set the frequency of the cosine wave (CW) generator output. 
+//
+esp_err_t DacESP32::setCwFrequency(uint32_t frequency)
+{
+  CHANNEL_CHECK(m_channel);
+  FREQUENCY_CHECK(frequency);
+
+  m_cosine_cfg.freq_hz = frequency;
+
+  if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
+    // DAC cosine channel already active
+    return outputCW(frequency, m_cosine_cfg.atten, m_cosine_cfg.phase, m_cosine_cfg.offset);
+  }
 
   return ESP_OK;
 }
 
 //
 // Set the amplitude of the cosine wave (CW) generator output.
-// Parameter: scale - scaling factor
-//             0...no scale (default), max. amplitude (real measurements were Vmin=~40mV, Vmax=~3.18V)
-//             1...scale to 1/2 
-//             2...scale to 1/4 
-//             3...scale to 1/8
+// Parameter: attenuation, possible values: 
+//        DAC_COSINE_ATTEN_DB_0....max. amplitude (0dB, real measurements: Vmin=~0.04V, Vmax=~3.18V)
+//        DAC_COSINE_ATTEN_DB_6....1/2 amplitude (-6dB)
+//        DAC_COSINE_ATTEN_DB_12...1/4 amplitude (-12dB)
+//        DAC_COSINE_ATTEN_DB_18...1/8 amplitude (-18dB)
 //
-esp_err_t DacESP32::setCwScale(dac_cw_scale_t scale)
+// Note: Register mutation is a much quicker way than to deregister a cosine channel and register it 
+//       again with altered amplitude parameter.
+//
+esp_err_t DacESP32::setCwScale(dac_cosine_atten_t atten)
 {
-  CHANNEL_CHECK;
+  CHANNEL_CHECK(m_channel);
 
-  if (scale != DAC_CW_SCALE_1 && scale != DAC_CW_SCALE_2 &&
-      scale != DAC_CW_SCALE_4 && scale != DAC_CW_SCALE_8) {
+  if (atten != DAC_COSINE_ATTEN_DB_0 && atten != DAC_COSINE_ATTEN_DB_6 &&
+      atten != DAC_COSINE_ATTEN_DB_12 && atten != DAC_COSINE_ATTEN_DB_18) {
     return ESP_ERR_INVALID_ARG;
   }
 
-  if (m_channel == DAC_CHANNEL_1) {
-    SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_SCALE1, scale, SENS_DAC_SCALE1_S);
-  }
-  else {
-    SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_SCALE2, scale, SENS_DAC_SCALE2_S);
-  }
-  m_cwScale = scale;
+  m_cosine_cfg.atten = atten;
 
+  if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
+    // DAC cosine channel already active
+    if (m_channel == DAC_CHAN_0) {
+      SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_SCALE1, atten, SENS_DAC_SCALE1_S);
+    }
+    else {
+      SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_SCALE2, atten, SENS_DAC_SCALE2_S);
+    }
+  }
+  
   return ESP_OK;
 }
 
 //
 // Set DC offset for CW generator of selected DAC channel.
 // Parameter: offset - allowed range -128...127 (8-bit)
-// Note: Unreasonable settings can cause waveform to be oversaturated (clipped).
-//       Unclipped output signal with max. amplitude requires offset = 0 !
+//
+// Note: 1) Unreasonable settings can cause waveform to be oversaturated (clipped).
+//          Unclipped output signal with max. amplitude requires offset = 0 !
+//       2) Register mutation is a much quicker way than to deregister a cosine channel and 
+//          register it again with altered offset parameter.
 //
 esp_err_t DacESP32::setCwOffset(int8_t offset)
 {
-  CHANNEL_CHECK;
+  CHANNEL_CHECK(m_channel);
 
-  if (m_channel == DAC_CHANNEL_1) {
-    SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_DC1, offset, SENS_DAC_DC1_S);
+  m_cosine_cfg.offset = offset;
+
+  if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
+    // DAC cosine channel already active
+    if (m_channel == DAC_CHAN_0) {
+      SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_DC1, offset, SENS_DAC_DC1_S);
+    }
+    else {
+      SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_DC2, offset, SENS_DAC_DC2_S);
+    }
   }
-  else {
-    SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_DC2, offset, SENS_DAC_DC2_S);
-  }
+
   return ESP_OK;
 }
 
 //
-// Setting phase of CW generator output.
+// Setting the phase of the CW generator output.
 // Parameter: phase - selected phase (0°/180°)
 //
-esp_err_t DacESP32::setCwPhase(dac_cw_phase_t phase)
+// Note: Register mutation is a much quicker way than to deregister a cosine channel and register it 
+//       again with altered phase parameter.
+//
+esp_err_t DacESP32::setCwPhase(dac_cosine_phase_t phase)
 {
-  CHANNEL_CHECK;
+  CHANNEL_CHECK(m_channel);
 
-  if (phase != DAC_CW_PHASE_0 && phase != DAC_CW_PHASE_180) {
+  if (phase != DAC_COSINE_PHASE_0 && phase != DAC_COSINE_PHASE_180) {
     return ESP_ERR_INVALID_ARG;
   }
 
-  if (m_channel == DAC_CHANNEL_1) {
-    SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_INV1, phase, SENS_DAC_INV1_S);
-  }
-  else {
-    SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_INV2, phase, SENS_DAC_INV2_S);
-  }
-  m_cwPhase = phase;
+  m_cosine_cfg.phase = phase;
 
-  return ESP_OK;
-}
-
-
-//
-// Selects CW generator as source for DAC channel
-//
-esp_err_t DacESP32::dacCwSelect()
-{
-  //CHANNEL_CHECK;
-
-  if (m_channel == DAC_CHANNEL_1) {
-    SET_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
-  }
-  else {
-    SET_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN2_M);
-  }
-
-  // enable CW generator
-  SET_PERI_REG_MASK(SENS_SAR_DAC_CTRL1_REG, SENS_SW_TONE_EN);
-
-  return ESP_OK;
-}
-
-//
-// Deselects CW generator as source for DAC channel
-//
-esp_err_t DacESP32::dacCwDeselect()
-{
-  //CHANNEL_CHECK;
-
-  if (m_channel == DAC_CHANNEL_1) {
-    CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
-  }
-  else {
-    CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN2_M);
-  }
-
-  if (!((READ_PERI_REG(SENS_SAR_DAC_CTRL2_REG) >> SENS_DAC_CW_EN1_S) & 1UL) &&
-      !((READ_PERI_REG(SENS_SAR_DAC_CTRL2_REG) >> SENS_DAC_CW_EN2_S) & 1UL)) {
-    // disable unused CW generator
-    CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL1_REG, SENS_SW_TONE_EN);
+  if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
+    // DAC cosine channel already active
+    if (m_channel == DAC_CHAN_0) {
+      SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_INV1, phase, SENS_DAC_INV1_S);
+    }
+    else {
+      SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_INV2, phase, SENS_DAC_INV2_S);
+    }
   }
 
   return ESP_OK;
@@ -479,62 +550,87 @@ esp_err_t DacESP32::dacCwDeselect()
 
 #ifdef DACESP32_DEBUG_FUNCTIONS_ENABLED
 //
-// Print object variables (only useful for debugging purposes)
+// Print object variables and/or DAC related register settings (only useful for debugging purposes!)
 //
-void DacESP32::printObjectVariables()
+void DacESP32::printObjectVariables(const char *s)
 {
-  Serial.println("\nObject Variables:");
-  Serial.printf("  m_channel=%d, m_objectCount=%d, m_cwFrequency=%d\n", m_channel, m_objectCount, m_cwFrequency);
-  Serial.printf("  m_cwScale=%d, m_cwPhase=%d, m_cwOffset=%d\n", m_cwScale, m_cwPhase, m_cwOffset);
+  Serial.printf("\nObject Variables [%s]:\n", s);
+  Serial.printf("  m_ch0_locked=%d, m_ch1_locked=%d, m_oneshot_handle=0x%x, m_cosine_handle=0x%x\n", 
+                m_ch0_locked, m_ch1_locked, (int)m_oneshot_handle, (int)m_cosine_handle);
+  Serial.printf("  m_oneshot_cfg.chan_id=%d, m_cosine_cfg.chan_id=%d, m_objectCount=%d, m_cwFrequency=%u\n", 
+                m_oneshot_cfg.chan_id, m_cosine_cfg.chan_id, m_objectCount, (unsigned int)m_cwFrequency);
+  Serial.printf("  m_cosine_cfg.atten=%d,    m_cosine_cfg.phase=%d,   m_cosine_cfg.offset=%d\n", 
+                m_cosine_cfg.atten, m_cosine_cfg.phase, m_cosine_cfg.offset);
 }
 
-//
-// Print selected register settings affecting the DAC system (only useful for debugging purposes)
-//
-void DacESP32::printDacRegisterSettings()
+void DacESP32::printDacRegisterSettings(const char *s)
 {
   uint32_t clk   = REG_READ(RTC_CNTL_CLK_CONF_REG),
            dac1  = READ_PERI_REG(RTCIO_PAD_DAC1_REG),
            dac2  = READ_PERI_REG(RTCIO_PAD_DAC2_REG),
            ctrl1 = READ_PERI_REG(SENS_SAR_DAC_CTRL1_REG),
            ctrl2 = READ_PERI_REG(SENS_SAR_DAC_CTRL2_REG);
+  unsigned int ck8mdiv = (unsigned int)(clk >> RTC_CNTL_CK8M_DIV_SEL_S) & RTC_CNTL_CK8M_DIV_SEL_V,
+               fstep = (unsigned int)(ctrl1 >> SENS_SW_FSTEP_S) & SENS_SW_FSTEP_V,
+               fcw = (unsigned int)((((float)CK8M / (1 + ck8mdiv)) / 65536UL) * fstep),
+               stepsize = (unsigned int)(((float)CK8M / (1 + ck8mdiv)) / 65536UL);
 
-  Serial.printf("\nRegister: RTC_CNTL_CLK_CONF_REG=0x%08x\n", clk);
+  Serial.printf("\nDAC related Register Settings [%s]:\n", s);               
+  Serial.printf("Register: RTC_CNTL_CLK_CONF_REG=0x%08x\n", (unsigned int)clk);
                  // RTC_CNTL_CK8M_DFREQ: value controls tuning of 8M clock
                  // RTC_CNTL_CK8M_DIV_SEL: configures 8M clock division
-  Serial.printf("  RTC_CNTL_FAST_CLK_RTC_SEL=%d, RTC_CNTL_CK8M_DFREQ=%d, RTC_CNTL_CK8M_DIV_SEL=%d\n", 
-                (clk >> RTC_CNTL_FAST_CLK_RTC_SEL_S) & RTC_CNTL_FAST_CLK_RTC_SEL_V, (clk >> RTC_CNTL_CK8M_DFREQ_S) & RTC_CNTL_CK8M_DFREQ_V,
-                (clk >> RTC_CNTL_CK8M_DIV_SEL_S) & RTC_CNTL_CK8M_DIV_SEL_V);
-  Serial.printf("Register: RTCIO_PAD_DAC1_REG=0x%08x\n", dac1);
-  Serial.printf("  RTCIO_PAD_PDAC1_RDE=%d,     RTCIO_PAD_PDAC1_RUE=%d\n", 
-                (dac1 >> RTCIO_PAD_PDAC_RDE_S) & RTCIO_PAD_PDAC_RDE_V, (dac1 >> RTCIO_PAD_PDAC_RUE_S) & RTCIO_PAD_PDAC_RUE_V);
-  Serial.printf("  RTCIO_PAD_PDAC1_DRV=%d,     RTCIO_PAD_PDAC1_DAC=0x%02x (%d),  RTCIO_PAD_PDAC1_XPD_DAC=%d\n", 
-                (dac1 >> RTCIO_PAD_PDAC_DRV_S) & RTCIO_PAD_PDAC_DRV_V, 
-                (dac1 >> RTCIO_PAD_PDAC_DAC_S) & RTCIO_PAD_PDAC_DAC_V, (dac1 >> RTCIO_PAD_PDAC_DAC_S) & RTCIO_PAD_PDAC_DAC_V,
-                (dac1 >> RTCIO_PAD_PDAC_XPD_DAC_S) & RTCIO_PAD_PDAC_XPD_DAC_V);
-  Serial.printf("  RTCIO_PAD_PDAC1_MUX_SEL=%d, RTCIO_PAD_PDAC1_DAC_XPD_FORCE=%d\n", 
-                (dac1 >> RTCIO_PAD_PDAC_MUX_SEL_S) & RTCIO_PAD_PDAC_MUX_SEL_V, (dac1 >> RTCIO_PAD_PDAC_DAC_XPD_FORCE_S) & RTCIO_PAD_PDAC_DAC_XPD_FORCE_V);
-  Serial.printf("Register: RTCIO_PAD_DAC2_REG=0x%08x\n", dac2);
-  Serial.printf("  RTCIO_PAD_PDAC2_RDE=%d,     RTCIO_PAD_PDAC2_RUE=%d\n", 
-                (dac2 >> RTCIO_PAD_PDAC_RDE_S) & RTCIO_PAD_PDAC_RDE_V, (dac2 >> RTCIO_PAD_PDAC_RUE_S) & RTCIO_PAD_PDAC_RUE_V);
-  Serial.printf("  RTCIO_PAD_PDAC2_DRV=%d,     RTCIO_PAD_PDAC2_DAC=0x%02x (%d),  RTCIO_PAD_PDAC2_XPD_DAC=%d\n", 
-                (dac2 >> RTCIO_PAD_PDAC_DRV_S) & RTCIO_PAD_PDAC_DRV_V, 
-                (dac2 >> RTCIO_PAD_PDAC_DAC_S) & RTCIO_PAD_PDAC_DAC_V, (dac2 >> RTCIO_PAD_PDAC_DAC_S) & RTCIO_PAD_PDAC_DAC_V,
-                (dac2 >> RTCIO_PAD_PDAC_XPD_DAC_S) & RTCIO_PAD_PDAC_XPD_DAC_V);
-  Serial.printf("  RTCIO_PAD_PDAC2_MUX_SEL=%d, RTCIO_PAD_PDAC2_DAC_XPD_FORCE=%d\n", 
-                (dac2 >> RTCIO_PAD_PDAC_MUX_SEL_S) & RTCIO_PAD_PDAC_MUX_SEL_V, (dac2 >> RTCIO_PAD_PDAC_DAC_XPD_FORCE_S) & RTCIO_PAD_PDAC_DAC_XPD_FORCE_V);
-  Serial.printf("Register: SENS_SAR_DAC_CTRL1_REG=0x%08x\n", ctrl1);
-  Serial.printf("  SENS_SW_TONE_EN=%d,   SENS_SW_FSTEP=%d\n", 
-                (ctrl1 >> SENS_SW_TONE_EN_S) & SENS_SW_TONE_EN_V, (ctrl1 >> SENS_SW_FSTEP_S) & SENS_SW_FSTEP_V);
-  Serial.printf("Register: SENS_SAR_DAC_CTRL2_REG=0x%08x\n", ctrl2);
-  Serial.printf("  SENS_DAC_CW_EN1=%d,   SENS_DAC_CW_EN2=%d\n", 
-                (ctrl2 >> SENS_DAC_CW_EN1_S) & SENS_DAC_CW_EN1_V, (ctrl2 >> SENS_DAC_CW_EN2_S) & SENS_DAC_CW_EN2_V);
-  Serial.printf("  SENS_DAC_INV1=%d,     SENS_DAC_INV2=%d\n", 
-                (ctrl2 >> SENS_DAC_INV1_S) & SENS_DAC_INV1_V, (ctrl2 >> SENS_DAC_INV2_S) & SENS_DAC_INV2_V);
-  Serial.printf("  SENS_DAC_SCALE1=%d,   SENS_DAC_SCALE2=%d\n", 
-                (ctrl2 >> SENS_DAC_SCALE1_S) & SENS_DAC_SCALE1_V, (ctrl2 >> SENS_DAC_SCALE2_S) & SENS_DAC_SCALE2_V);
-  Serial.printf("  SENS_DAC_DC1=0x%04x, SENS_DAC_DC2=0x%04x\n", 
-                (ctrl2 >> SENS_DAC_DC1_S) & SENS_DAC_DC1_V, (ctrl2 >> SENS_DAC_DC2_S) & SENS_DAC_DC2_V);
+  Serial.printf("  RTC_CNTL_FAST_CLK_RTC_SEL=%u, RTC_CNTL_CK8M_DFREQ=%u, RTC_CNTL_CK8M_DIV_SEL=%u\n", 
+                (unsigned int)(clk >> RTC_CNTL_FAST_CLK_RTC_SEL_S) & RTC_CNTL_FAST_CLK_RTC_SEL_V, 
+                (unsigned int)(clk >> RTC_CNTL_CK8M_DFREQ_S) & RTC_CNTL_CK8M_DFREQ_V,
+                ck8mdiv);
+  Serial.printf("Register: RTCIO_PAD_DAC1_REG=0x%08x\n", (unsigned int)dac1);
+  Serial.printf("  RTCIO_PAD_PDAC1_RDE=%u,     RTCIO_PAD_PDAC1_RUE=%u\n", 
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_RDE_S) & RTCIO_PAD_PDAC_RDE_V, 
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_RUE_S) & RTCIO_PAD_PDAC_RUE_V);
+  Serial.printf("  RTCIO_PAD_PDAC1_SLP_IE=%u,  RTCIO_PAD_PDAC1_SLP_OE=%u,        RTCIO_PAD_PDAC1_FUN_IE=%u\n",
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_SLP_IE_S) & RTCIO_PAD_PDAC_SLP_IE_V, 
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_SLP_OE_S) & RTCIO_PAD_PDAC_SLP_OE_V, 
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_FUN_IE_S) & RTCIO_PAD_PDAC_FUN_IE_V);
+  Serial.printf("  RTCIO_PAD_PDAC1_DRV=%u,     RTCIO_PAD_PDAC1_DAC=0x%02x (%03u),  RTCIO_PAD_PDAC1_XPD_DAC=%u\n", 
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_DRV_S) & RTCIO_PAD_PDAC_DRV_V, 
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_DAC_S) & RTCIO_PAD_PDAC_DAC_V, 
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_DAC_S) & RTCIO_PAD_PDAC_DAC_V,
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_XPD_DAC_S) & RTCIO_PAD_PDAC_XPD_DAC_V);
+  Serial.printf("  RTCIO_PAD_PDAC1_MUX_SEL=%u, RTCIO_PAD_PDAC1_DAC_XPD_FORCE=%u\n", 
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_MUX_SEL_S) & RTCIO_PAD_PDAC_MUX_SEL_V, 
+                (unsigned int)(dac1 >> RTCIO_PAD_PDAC_DAC_XPD_FORCE_S) & RTCIO_PAD_PDAC_DAC_XPD_FORCE_V);
+  Serial.printf("Register: RTCIO_PAD_DAC2_REG=0x%08x\n", (unsigned int)dac2);
+  Serial.printf("  RTCIO_PAD_PDAC2_RDE=%u,     RTCIO_PAD_PDAC2_RUE=%u\n", 
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_RDE_S) & RTCIO_PAD_PDAC_RDE_V, 
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_RUE_S) & RTCIO_PAD_PDAC_RUE_V);
+  Serial.printf("  RTCIO_PAD_PDAC2_SLP_IE=%u,  RTCIO_PAD_PDAC2_SLP_OE=%u,        RTCIO_PAD_PDAC2_FUN_IE=%u\n",
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_SLP_IE_S) & RTCIO_PAD_PDAC_SLP_IE_V, 
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_SLP_OE_S) & RTCIO_PAD_PDAC_SLP_OE_V, 
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_FUN_IE_S) & RTCIO_PAD_PDAC_FUN_IE_V);
+  Serial.printf("  RTCIO_PAD_PDAC2_DRV=%u,     RTCIO_PAD_PDAC2_DAC=0x%02x (%03d),  RTCIO_PAD_PDAC2_XPD_DAC=%u\n", 
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_DRV_S) & RTCIO_PAD_PDAC_DRV_V, 
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_DAC_S) & RTCIO_PAD_PDAC_DAC_V, 
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_DAC_S) & RTCIO_PAD_PDAC_DAC_V,
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_XPD_DAC_S) & RTCIO_PAD_PDAC_XPD_DAC_V);
+  Serial.printf("  RTCIO_PAD_PDAC2_MUX_SEL=%u, RTCIO_PAD_PDAC2_DAC_XPD_FORCE=%u\n", 
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_MUX_SEL_S) & RTCIO_PAD_PDAC_MUX_SEL_V, 
+                (unsigned int)(dac2 >> RTCIO_PAD_PDAC_DAC_XPD_FORCE_S) & RTCIO_PAD_PDAC_DAC_XPD_FORCE_V);
+  Serial.printf("Register: SENS_SAR_DAC_CTRL1_REG=0x%08x\n", (unsigned int)ctrl1);
+  Serial.printf("  SENS_SW_TONE_EN=%u,         SENS_SW_FSTEP=%u ---> resulting fcw=%uHz, stepsize=%uHz~\n", 
+                (unsigned int)(ctrl1 >> SENS_SW_TONE_EN_S) & SENS_SW_TONE_EN_V, fstep, fcw, stepsize);
+  Serial.printf("Register: SENS_SAR_DAC_CTRL2_REG=0x%08x\n", (unsigned int)ctrl2);
+  Serial.printf("  SENS_DAC_CW_EN1=%u,         SENS_DAC_CW_EN2=%u\n", 
+                (unsigned int)(ctrl2 >> SENS_DAC_CW_EN1_S) & SENS_DAC_CW_EN1_V, 
+                (unsigned int)(ctrl2 >> SENS_DAC_CW_EN2_S) & SENS_DAC_CW_EN2_V);
+  Serial.printf("  SENS_DAC_INV1=%u,           SENS_DAC_INV2=%u\n", 
+                (unsigned int)(ctrl2 >> SENS_DAC_INV1_S) & SENS_DAC_INV1_V, 
+                (unsigned int)(ctrl2 >> SENS_DAC_INV2_S) & SENS_DAC_INV2_V);
+  Serial.printf("  SENS_DAC_SCALE1=%u,         SENS_DAC_SCALE2=%u\n", 
+                (unsigned int)(ctrl2 >> SENS_DAC_SCALE1_S) & SENS_DAC_SCALE1_V, 
+                (unsigned int)(ctrl2 >> SENS_DAC_SCALE2_S) & SENS_DAC_SCALE2_V);
+  Serial.printf("  SENS_DAC_DC1=0x%04x,       SENS_DAC_DC2=0x%04x\n", 
+                (unsigned int)(ctrl2 >> SENS_DAC_DC1_S) & SENS_DAC_DC1_V, 
+                (unsigned int)(ctrl2 >> SENS_DAC_DC2_S) & SENS_DAC_DC2_V);
 }
 #endif
 
