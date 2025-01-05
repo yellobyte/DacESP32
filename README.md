@@ -29,7 +29,7 @@ In **Arduino IDE** open the **Library Manager** and go to menu items **Sketch** 
 
 In **VSCode/PlatformIO** click the **platformio sidebar icon**, open the **libraries** view, search for DacESP32 and click on **Add to Project**.
 
-All examples were build & tested with ArduinoIDE V2.3.4/ESP32 Core V3.0.7 and VSCode/PlatformIO[PIOArduino] (Core 6.1.16 - Home 3.4.4) with ESP32 Core V3.1.0.  
+All examples were build & tested with ArduinoIDE V2.3.4/Arduino ESP32 Core V3.0.7 and VSCode/PlatformIO[PIOArduino] (Core 6.1.16 - Home 3.4.4) with Arduino ESP32 Core V3.1.0.  
 
 As of library **version 2.0.0** the Arduino ESP32 Core version **3.0.0** or higher is required for a successful build. The library has been redesigned and now uses *driver/dac_oneshot.h* and *driver/dac_cosine.h* instead of the deprecated *driver/dac.h*. 
 
