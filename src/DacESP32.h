@@ -1,6 +1,6 @@
 /*
   DacESP32, an Arduino library for using the ESP32 DAC output channels 
-	
+  
   Copyright (c) 2022 Thomas Jentzsch
 
   The ESP32 has two independent 8-bit DAC (Digital to Analog Converter)

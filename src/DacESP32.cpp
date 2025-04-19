@@ -301,13 +301,13 @@ esp_err_t DacESP32::outputVoltage(float voltage)
 //
 // The ESP32 Arduino framework by default can only generate CW output frequencies above 130Hz and only in steps of ~122Hz.
 //
-// However, this library allows to set the CW frequency more accurately starting from 16Hz and upwards.
-// This is done by bypassing Espressif's driver API and altering register values for SENS_SAR_SW_FSTEP and 
-// RTC_CNTL_CK8M_DIV_SEL directly in the ESP32 core. Various combinations of the two variables are tried in order 
-// to hit the target frequency as close as possible.
+// However, this library allows to set the CW frequency more accurately starting from 16Hz and upwards. This is done 
+// by altering register values for SENS_SAR_SW_FSTEP and RTC_CNTL_CK8M_DIV_SEL directly in the ESP32 DAC section. 
+// Various combinations of the two variables are tried in order to hit the target frequency as close as possible.
 //
-// Note: By doing so the digital controller clock of both the DAC and (!) ADC sections in the ESP32 might get changed. 
-//       If this causes problems with the ADC section in the ESP32 then use build option 'CW_FREQUENCY_HIGH_ACCURACY=0'
+// Note: By doing so the digital controller clock of both the DAC and (!) ADC sections in the ESP32 might get reduced
+//       and in this case the program looptime will increase! 
+//       If this causes problems in your program then you must use build option 'CW_FREQUENCY_HIGH_ACCURACY=0'
 //       which brings back the default behaviour as explained above.
 //
 esp_err_t DacESP32::outputCW(uint32_t frequency)
@@ -348,7 +348,7 @@ esp_err_t DacESP32::outputCW(uint32_t frequency, dac_cosine_atten_t atten, dac_c
   uint32_t sw_fstep;
 
   if ((err = calcFrequSettings(m_cosine_cfg.freq_hz, &clkdiv, &sw_fstep)) != ESP_OK) return err;
-  // frequencies below 130Hz (default fmin) will only pass the new driver APIs frequency check if rtc_clk_freq is reduced
+  // frequencies below 130Hz (default fmin) will only pass the new dac_cosine driver frequency check if rtc_clk_freq is reduced
   if (frequency < 130) REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_CK8M_DIV_SEL, CK8M_DIV_MAX);
 #endif
 
@@ -371,7 +371,8 @@ esp_err_t DacESP32::outputCW(uint32_t frequency, dac_cosine_atten_t atten, dac_c
 }
 
 //
-// Helper function: calculate DAC parameters for higher frequency accuracy
+// Helper function: Calculates DAC parameters for various frequency settings.
+// Produces higher frequency accuracy only without build option CW_FREQUENCY_HIGH_ACCURACY=0.
 //
 esp_err_t DacESP32::calcFrequSettings(const uint32_t frequency, uint8_t *clkdiv, uint32_t *sw_fstep)
 {
@@ -384,7 +385,11 @@ esp_err_t DacESP32::calcFrequSettings(const uint32_t frequency, uint8_t *clkdiv,
 #endif        
         stepSizeTemp;
 
+#ifdef CW_FREQUENCY_HIGH_ACCURACY        
   divMax = CK8M_DIV_MAX;
+#else
+  divMax = 0;
+#endif  
 
   // delta to start with (biggest possible stepsize + 1)
   deltaAbs = ((float)CK8M / 65536UL) + 1;
@@ -438,18 +443,29 @@ end:
 }
 
 //
-// Set the frequency of the cosine wave (CW) generator output. 
+// Changes the frequency of the cosine wave (CW) generator without (re-)registering the channel with
+// outputCW() and therefore bypassing the dac_cosine driver. This might have some negative side effects
+// though. However, much faster than changing the output frequency with outputCW().
+// Useful e.g. for very fast frequency sweeps without any dropouts in the channel output.
 //
 esp_err_t DacESP32::setCwFrequency(uint32_t frequency)
 {
+  esp_err_t err;
+  uint8_t clkdiv;
+  uint32_t sw_fstep;
+
   CHANNEL_CHECK(m_channel);
   FREQUENCY_CHECK(frequency);
 
-  m_cosine_cfg.freq_hz = frequency;
+  if ((err = calcFrequSettings(frequency, &clkdiv, &sw_fstep)) != ESP_OK) 
+    return err;
+
+  m_cosine_cfg.freq_hz = m_cwFrequency = frequency;
 
   if (m_cosine_handle != DAC_COS_HANDLE_UNDEFINED) {
     // DAC cosine channel already active
-    return outputCW(frequency, m_cosine_cfg.atten, m_cosine_cfg.phase, m_cosine_cfg.offset);
+    REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_CK8M_DIV_SEL, clkdiv);
+    SET_PERI_REG_BITS(SENS_SAR_DAC_CTRL1_REG, SENS_SW_FSTEP, sw_fstep, SENS_SW_FSTEP_S);
   }
 
   return ESP_OK;
