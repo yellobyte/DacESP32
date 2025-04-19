@@ -41,6 +41,7 @@ Add a file named "build_opt.h" containing build options to your sketch directory
 ```c
 -DSW_FSTEP_MAX=512
 -DCK8M_DFREQ_ADJUSTED=169
+-DCW_FREQUENCY_HIGH_ACCURACY=0
 ```
 Please note: Changes made to "build_opt.h" after a first build will not be detected by the Arduino IDE. Forcing the IDE to rebuild the whole project, deleting DacESP32.cpp.o in the temporary build directory or simply restarting the IDE will fix that.  
 
