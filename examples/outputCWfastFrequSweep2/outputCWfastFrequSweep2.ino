@@ -6,7 +6,7 @@
 
   This sketch generates a sinus signal on DAC channel 1 (GPIO25) using the integrated cosine waveform 
   (CW) generator. The signal frequency repeatedly sweeps fast from lower to higher frequency. 
-  Another sawtooth shaped signal with constant frequency is output on DAC channel 2 (GPIO26).
+  A sawtooth shaped signal with constant frequency is output on DAC channel 2 (GPIO26).
 
   IMPORTANT: Needs build option CW_FREQUENCY_HIGH_ACCURACY=0 for the loop time to stay constant
              and therefore getting a stable sawtooth signal.
