@@ -10,8 +10,8 @@ Below an example for generating a sinus signal of ~2kHz on GPIO25 (Channel 1) an
 ...
 #include "DacESP32.h"
 
-DacESP32 dac1(DAC_CHANNEL_1),
-         dac2(DAC_CHANNEL_2);
+DacESP32 dac1(DAC_CHAN_0),
+         dac2(DAC_CHAN_1);
 
 setup() {
   dac1.outputCW(2000);                // 2kHz sinus signal on pin 25
