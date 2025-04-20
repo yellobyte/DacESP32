@@ -5,9 +5,9 @@
   DAC channel 1 is assigned to  GPIO25 (Pin 25) and DAC channel 2 is assigned to GPIO26 (Pin 26).
 
   This sketch generates a sinus signal on DAC channel 1 (Pin 25) using the integrated cosine waveform 
-  (CW) generator. The signal frequency repeatedly sweeps fast from lower to higher frequencies. 
+  (CW) generator. The output signal repeatedly sweeps fast from lower to higher frequencies. 
 
-  Last updated 2025-04-19, ThJ <yellobyte@bluewin.ch>
+  Last updated 2025-04-20, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
