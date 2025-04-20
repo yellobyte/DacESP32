@@ -29,17 +29,16 @@ void setup() {
   Serial.print("Sketch started. Sinus signal output on GPIO (Pin) number: ");
   Serial.println(GPIO_NUM_25);
 
-  dac1.outputCW(frequ);
+  dac1.outputCW(frequ);           // register and activate the DAC output channel
   delay(CHANGE_DELAY);
 }
 
 void loop() {
-  // output a sinus signal with max. amplitude for CHANGE_DELAY milliseconds
-  if (dac1.setCwFrequency(frequ) != ESP_OK)
-    Serial.printf("Error: setCwFrequency(%d)\n", frequ);
-  delay(CHANGE_DELAY);
-
-  // increase frequency by FREQU_STEP up to FREQU_STOP and then repeat cycle
+  // calculate and set the new frequency of the sinus output signal
   frequ += FREQU_STEP;
   if (frequ > FREQU_STOP) frequ = FREQU_START;
+  if (dac1.setCwFrequency(frequ) != ESP_OK)
+    Serial.printf("Error: setCwFrequency(%d)\n", frequ);
+  
+  delay(CHANGE_DELAY);
 }
