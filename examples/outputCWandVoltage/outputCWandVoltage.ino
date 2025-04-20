@@ -8,14 +8,14 @@
   cosine waveform (CW) generator and a ~70Hz triangle waveform on DAC channel 2
   setting the DAC output level discretely with function outputVoltage().
 
-  Last updated 2022-09-04, ThJ <yellobyte@bluewin.ch>
+  Last updated 2025-04-19, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
 #include "DacESP32.h"
 
-DacESP32 dac1(DAC_CHANNEL_1),
-         dac2(DAC_CHANNEL_2);
+DacESP32 dac1(DAC_CHAN_0),
+         dac2(DAC_CHAN_1);
 
 void setup() {
   gpio_num_t pinCh1, pinCh2;
