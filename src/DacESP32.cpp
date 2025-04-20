@@ -60,10 +60,14 @@
 // as the maximal possible CW output frequency. With default value 256 it is ~31.3kHz.
 // Lowering the value will increase the number of voltage steps/cycle and vice versa. 
 // IMPORTANT: This definition is only valid without build option 'CW_FREQUENCY_HIGH_ACCURACY=0'.
-#ifndef SW_FSTEP_MAX
+#if defined CW_FREQUENCY_HIGH_ACCURACY
+#if !defined SW_FSTEP_MAX
 #define SW_FSTEP_MAX  256
 #elif (SW_FSTEP_MAX != 64 && SW_FSTEP_MAX != 128 && SW_FSTEP_MAX != 256 && SW_FSTEP_MAX != 512 && SW_FSTEP_MAX != 1024)
 #error "Build option SW_FSTEP_MAX is defined incorrectly ! Allowed values: 64, 128, 256, 512 or 1024."
+#endif
+#else // !defined CW_FREQUENCY_HIGH_ACCURACY
+#define SW_FSTEP_MAX 1640 // limits setCwFrequency() to ~200kHz
 #endif
 
 // The maximum possible DAC output voltage depends on the actual supply voltage (VDD) of
