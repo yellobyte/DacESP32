@@ -1,8 +1,10 @@
 # DacESP32
 
-The ESP32 contains two 8-bit DAC (digital to analog converter) channels, connected to GPIO25 (DAC Channel 1) and GPIO26 (DAC Channel 2). Using the DACs allows these channels to be set to arbitrary output voltages between 0...+3.3V (VDD). Both channels can be driven alternatively by an integrated common cosine waveform (CW) generator. The CW generator is explained more detailed further down.
+The Espressif MCUs ESP32 and ESP32-S2 contain two 8-bit DAC (digital to analog converter) channels each. On ESP32 the first DAC channel is assigned to GPIO25 and the second channel is assigned to GPIO26. On ESP32-S2 the two DAC channels are assigned to GPIO17 and GPIO18.
 
-This Arduino library makes using the two ESP32 DAC output channels fast & easy.
+Using the DACs allows these channels to be set to arbitrary output voltages between 0...+3.3V (VDD). Both channels can be driven alternatively by an integrated common cosine waveform (CW) generator. The CW generator is explained more detailed further down.
+
+This Arduino library makes using the two ESP32(-S2) DAC output channels fast & easy.
 
 Below an example for generating a sinus signal of ~2kHz on GPIO25 (Channel 1) and a steady voltage level of about 1.3V on GPIO26 (Channel 2).  
 
@@ -29,7 +31,7 @@ In **Arduino IDE** open the **Library Manager** and go to menu items **Sketch** 
 
 In **VSCode/PlatformIO** click the **platformio sidebar icon**, open the **libraries** view, search for DacESP32 and click on **Add to Project**.
 
-All examples were build & tested with ArduinoIDE V2.3.4/Arduino ESP32 Core V3.0.7 and VSCode/PlatformIO[PIOArduino] (Core 6.1.16 - Home 3.4.4) with Arduino ESP32 Core V3.1.0.  
+All examples were successfully build & tested with ArduinoIDE V2.3.4/Arduino ESP32 Core V3.0.7 as well as VSCode/PlatformIO[PIOArduino] (Core 6.1.16 - Home 3.4.4) with Arduino ESP32 Core V3.1.0.  
 
 As of library **version 2.0.0** the Arduino ESP32 Core version **3.0.0** or higher is required for a successful build. The library has been redesigned and now uses *driver/dac_oneshot.h* and *driver/dac_cosine.h* instead of the deprecated *driver/dac.h*. 
 
@@ -54,7 +56,7 @@ build_flags =
   -DCHANNEL_VOLTAGE_MAX=3.35
 ```
 ### :bangbang: **ATTENTION:**  
-Older Espressif ESP32 framework versions have some needed type definitions missing and compiling this library **up to version 1.1.1** produces errors like **'_definition for dac_cw_scale_t missing_'** or **'_definition for dac_cw_phase_t missing_'**. In this case please add build option `DACESP32_TYPE_DEFS` to your config file as explained above.
+Old Espressif ESP32 framework versions have some needed type definitions missing and compiling this library **up to version 1.1.1** produces errors like **'_definition for dac_cw_scale_t missing_'** or **'_definition for dac_cw_phase_t missing_'**. In this case please add build option `DACESP32_TYPE_DEFS` to your config file as explained above.
 
 ### :hammer_and_wrench: Available library build options
 
