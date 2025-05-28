@@ -26,7 +26,7 @@ void setup() {
   Serial.begin(115200);
 
   Serial.println();
-  Serial.print("Sketch started.");
+  Serial.println("Sketch started.");
   Serial.print("Sinus signal on GPIO (Pin) number: ");
   dac1.getGPIOnum(&pinCh1);
   Serial.println(pinCh1);
