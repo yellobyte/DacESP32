@@ -164,6 +164,15 @@ DacESP32::DacESP32(gpio_num_t pin)
 }
 
 //
+// Class constructor.
+// Parameter: nr...assigned GPIO pin as integer
+//
+DacESP32::DacESP32(int pin) 
+  : DacESP32((gpio_num_t)pin)
+{
+}
+
+//
 // Class destructor.
 //
 DacESP32::~DacESP32()
@@ -199,9 +208,9 @@ esp_err_t DacESP32::getGPIOnum(gpio_num_t *gpio_num)
   CHANNEL_CHECK(m_channel);
 
   if (m_channel == DAC_CHAN_0)
-      *gpio_num = GPIO_NUM_25;
+    *gpio_num = (gpio_num_t)DAC_CHAN0_GPIO_NUM;
   else
-      *gpio_num = GPIO_NUM_26;
+    *gpio_num = (gpio_num_t)DAC_CHAN1_GPIO_NUM;
 
   return ESP_OK;
 }

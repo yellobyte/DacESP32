@@ -2,12 +2,15 @@
   outputVoltage2.ino
 
   The ESP32 contains two 8-bit DAC output channels.
-  DAC channel 1 is assigned to GPIO25 (Pin 25) and DAC channel 2 is assigned to GPIO26 (Pin 26).
+  The first DAC channel is assigned to GPIO25 and the second one to GPIO26.
 
-  This sketch activates only DAC channel 1 and repeatedly generates increasing voltage 
+  The ESP32-S2 contains two 8-bit DAC output channels as well.
+  Here the first DAC channel is assigned to GPIO17 and the second one to GPIO18.
+
+  This sketch activates only the first DAC channel and repeatedly generates increasing voltage 
   levels from 0...3.3V (VDD) in steps of 0.15V. 
 
-  Last updated 2025-01-05, ThJ <yellobyte@bluewin.ch>
+  Last updated 2025-05-28, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>

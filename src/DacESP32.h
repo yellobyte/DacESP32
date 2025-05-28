@@ -44,6 +44,7 @@
 #include "soc/dac_channel.h"
 #include "soc/rtc.h"
 #include "soc/rtc_io_reg.h"
+#include "soc/rtc_cntl_reg.h"
 #include "hal/dac_types.h"
 
 #ifndef DAC_CHAN0_GPIO_NUM
@@ -119,6 +120,7 @@ struct dac_cosine_s_ {
 class DacESP32
 {
   public:
+    DacESP32(int pin); 
     DacESP32(gpio_num_t pin);
     DacESP32(dac_channel_t channel);
     ~DacESP32();

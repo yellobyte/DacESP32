@@ -2,12 +2,15 @@
   outputAnalogDigitalMixed.ino
 
   The ESP32 contains two 8-bit DAC output channels.
-  DAC channel 1 is assigned to GPIO25 (Pin 25) and DAC channel 2 is assigned to GPIO26 (Pin 26).
+  The first DAC channel is assigned to GPIO25 and the second one to GPIO26.
 
-  This sketch generates a ~500Hz sinus signal on DAC channel 1 (GPIO pin 25)
+  The ESP32-S2 contains two 8-bit DAC output channels as well.
+  Here the first DAC channel is assigned to GPIO17 and the second one to GPIO18.
+
+  This sketch generates a ~500Hz sinus signal on the first DAC channel 
   followed by a ~500Hz digital output signal, 5 seconds each & alternatingly. 
 
-  Last updated 2025-01-04, ThJ <yellobyte@bluewin.ch>
+  Last updated 2025-05-28, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
@@ -21,22 +24,22 @@ void setup() {
 
   Serial.println();
   Serial.print("Sketch started. Voltage level changes on GPIO (Pin) number: ");
-  Serial.println(GPIO_NUM_25);
+  Serial.println(DAC_CHAN0_GPIO_NUM);
 }
 
 void loop() {
   if (mode++ % 2) {
     // ~500Hz sinus signal output for 5 secs
-    DacESP32 dac1(GPIO_NUM_25);
+    DacESP32 dac1(DAC_CHAN0_GPIO_NUM);
     dac1.outputCW(500);
     delay(5000);
   }
   else {
     // ~500Hz digital output for 5 secs
-    pinMode(GPIO_NUM_25, OUTPUT);
+    pinMode(DAC_CHAN0_GPIO_NUM, OUTPUT);
     counter = 0;
     do {
-      digitalWrite(GPIO_NUM_25,!digitalRead(GPIO_NUM_25));
+      digitalWrite(DAC_CHAN0_GPIO_NUM,!digitalRead(DAC_CHAN0_GPIO_NUM));
       delay(1);
     } while (counter++ < 5000);
   }

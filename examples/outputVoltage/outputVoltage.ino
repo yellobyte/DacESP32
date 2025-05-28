@@ -2,25 +2,28 @@
   outputVoltage.ino
 
   The ESP32 contains two 8-bit DAC output channels.
-  DAC channel 1 is assigned to GPIO25 (Pin 25) and DAC channel 2 is assigned to GPIO26 (Pin 26).
+  The first DAC channel is assigned to GPIO25 and the second one to GPIO26.
 
-  This sketch activates only DAC channel 1 and generates a sawtooth waveform with a very low 
-  frequency (~4Hz). 
+  The ESP32-S2 contains two 8-bit DAC output channels as well.
+  Here the first DAC channel is assigned to GPIO17 and the second one to GPIO18.
 
-  Last updated 2025-01-04, ThJ <yellobyte@bluewin.ch>
+  This sketch activates only the first DAC channel and generates a sawtooth waveform with a 
+  very low frequency (~4Hz). 
+
+  Last updated 2025-05-28, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
 #include "DacESP32.h"
 
-DacESP32 dac1(GPIO_NUM_25);
+DacESP32 dac1(DAC_CHAN0_GPIO_NUM);
 
 void setup() {
   Serial.begin(115200);
 
   Serial.println();
   Serial.print("Sketch started. Voltage level changes on GPIO (Pin) number: ");
-  Serial.println(GPIO_NUM_25);
+  Serial.println(DAC_CHAN0_GPIO_NUM);
 }
 
 void loop() {

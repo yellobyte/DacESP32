@@ -2,12 +2,15 @@
   outputCWwithPhaseShift.ino
 
   The ESP32 contains two 8-bit DAC output channels.
-  DAC channel 1 is GPIO25 (Pin 25) and DAC channel 2 is GPIO26 (Pin 26).
+  The first DAC channel is assigned to GPIO25 and the second one to GPIO26.
+
+  The ESP32-S2 contains two 8-bit DAC output channels as well.
+  Here the first DAC channel is assigned to GPIO17 and the second one to GPIO18.
 
   This sketch generates a ~1000Hz sinus signal on both channels using the integrated
   cosine waveform (CW) generator. The two signals have a 180° phase shift in between.
 
-  Last updated 2025-01-04, ThJ <yellobyte@bluewin.ch>
+  Last updated 2025-05-28, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
