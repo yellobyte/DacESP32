@@ -6,7 +6,7 @@ Using the DACs allows these channels to be set to arbitrary output voltages betw
 
 This Arduino library makes using the two ESP32(-S2) DAC output channels fast & easy.
 
-Below an example for generating a sinus signal of ~2kHz on GPIO25 (Channel 1) and a steady voltage level of about 1.3V on GPIO26 (Channel 2).  
+Below an example for generating a sinus signal of ~2kHz on Channel 1 and a steady voltage level of about 1.3V on Channel 2.  
 
 ```c
 ...
